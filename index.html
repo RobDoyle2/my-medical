@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My Medical Record</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: one phone-width column, five-slot tab bar with a central "Log" button. Calm teal on cool grey, large type. */
+:root{
+  --bg:#EEF1F0; --surface:#FFFFFF; --ink:#1B2A2F; --muted:#51616A; --line:#DDE3E1;
+  --accent:#17595A; --accent-ink:#FFFFFF; --accent-soft:#D9EBE9; --accent-soft-ink:#0F4546;
+  --warn-soft:#FBE9CF; --warn-ink:#6B3500;
+  --font:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.4}
+button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:3px solid #2F7FD0;outline-offset:2px}
+h1,h2,h3,p{margin:0;text-wrap:balance}
+.app{max-width:440px;margin:0 auto;min-height:100vh;background:var(--bg);padding-bottom:110px;position:relative}
+.pad{padding:0 16px}
+.top{display:flex;align-items:center;gap:8px;padding:18px 8px 6px}
+.top .t{flex:1;font-weight:700;font-size:18px}
+.iconbtn{width:48px;height:48px;border-radius:24px;border:0;background:transparent;display:flex;align-items:center;justify-content:center;color:var(--ink)}
+.iconbtn.solid{background:var(--accent);color:var(--accent-ink)}
+.iconbtn.line{background:var(--surface);border:1px solid var(--line)}
+.textbtn{min-height:44px;padding:0 12px;border:0;background:none;color:var(--accent);font-weight:700}
+h1.big{font-size:28px;line-height:1.15;font-weight:700}
+.sub{color:var(--muted);font-size:15px}
+.sec{font-size:17px;font-weight:700;margin:24px 16px 10px;display:flex;justify-content:space-between;align-items:baseline}
+.sec .textbtn{min-height:32px;padding:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;margin:0 16px}
+.card.pad16{padding:16px}
+.hero{background:var(--accent);color:#fff;border-radius:20px;margin:12px 16px 0;padding:18px}
+.hero .eyebrow{font-size:12px;letter-spacing:.08em;font-weight:700;color:#CDE3E0}
+.hero .big2{font-size:22px;font-weight:700;margin-top:6px}
+.hero .line2{color:#E3F0EE;font-size:16px}
+.btnrow{display:flex;gap:10px;margin-top:14px}
+.btn{min-height:52px;border-radius:14px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-weight:700;padding:0 16px;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
+.btn.primary{background:var(--accent);color:var(--accent-ink)}
+.btn.onhero{background:#fff;color:var(--accent);border-color:#fff}
+.btn.ghosthero{border-color:#CDE3E0;color:#fff}
+.btn.block{width:100%}
+.btn.flex1{flex:1}
+.btn.danger{border-color:#8A3B12;color:#8A3B12}
+.row{width:100%;display:flex;align-items:center;gap:12px;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:12px 14px;min-height:60px}
+.row:last-child{border-bottom:0}
+.row .grow{flex:1;min-width:0}
+.row .name{font-weight:700}
+.row .meta{color:var(--muted);font-size:14px}
+.avatar{width:44px;height:44px;border-radius:22px;background:var(--accent-soft);color:var(--accent-soft-ink);font-weight:700;display:flex;align-items:center;justify-content:center;flex:none}
+.avatar.lg{width:64px;height:64px;border-radius:32px;font-size:22px}
+.chip{display:inline-block;border-radius:20px;padding:4px 10px;font-size:13px;font-weight:700;background:var(--accent-soft);color:var(--accent-soft-ink)}
+.chip.warn{background:var(--warn-soft);color:var(--warn-ink)}
+.chip.plain{background:#E6EAE8;color:#334047}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.fchip{min-height:44px;border-radius:22px;padding:0 16px;border:1.5px solid var(--line);background:var(--surface);font-weight:700;color:var(--ink)}
+.fchip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.seg{display:flex;background:#DFE5E3;border-radius:14px;padding:4px;margin:12px 16px 0}
+.seg button{flex:1;min-height:44px;border:0;border-radius:11px;background:transparent;font-weight:700;color:#3F4D55}
+.seg button.on{background:#fff;color:var(--ink)}
+.date{width:54px;flex:none;text-align:center;line-height:1.1}
+.date b{display:block;font-size:20px}
+.date span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.kind{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.tl-month{margin:20px 20px 8px;font-size:14px;font-weight:700;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.attn{width:calc(100% - 32px);margin:0 16px 8px;display:block;text-align:left;border:0;border-radius:14px;background:var(--warn-soft);color:var(--warn-ink);padding:14px 16px;font-weight:700;min-height:52px}
+.attn small{display:block;font-weight:400;font-size:14px}
+.note{white-space:pre-wrap}
+.lbl{font-size:12px;font-weight:700;letter-spacing:.07em;color:var(--muted);text-transform:uppercase}
+.meter{height:8px;border-radius:4px;background:#E3E8E6;overflow:hidden;margin-top:10px}
+.meter i{display:block;height:100%;background:var(--accent)}
+.meter.low i{background:#B5600F}
+.check{display:flex;align-items:center;gap:12px;width:100%;min-height:52px;border:0;border-bottom:1px solid var(--line);background:none;text-align:left;padding:0 14px}
+.box{width:26px;height:26px;border-radius:7px;border:2px solid var(--accent);flex:none;display:flex;align-items:center;justify-content:center;color:#fff}
+.box.on{background:var(--accent)}
+.check.done span.tx{text-decoration:line-through;color:var(--muted)}
+.inline{display:flex;gap:8px;padding:10px 14px}
+.inline input{flex:1}
+input,select,textarea{width:100%;min-height:48px;border:1.5px solid #B9C4C1;border-radius:12px;background:#fff;padding:10px 12px;font-family:inherit;font-size:16px;color:var(--ink)}
+textarea{min-height:90px;resize:vertical}
+label.f{display:block;margin-top:14px;font-weight:700;font-size:15px}
+label.f small{display:block;font-weight:400;color:var(--muted);font-size:13px}
+.fieldbox{margin-top:6px}
+.tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(440px,100%);height:76px;background:#fff;border-top:1px solid var(--line);display:flex;align-items:center;padding:0 6px;z-index:5}
+.tabbar button.tab{flex:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:60px;color:var(--muted);font-size:12px;font-weight:700}
+.tabbar button.tab.on{color:var(--accent)}
+.logbtn{width:60px;height:60px;border-radius:30px;border:0;background:var(--accent);color:#fff;margin:0 6px;transform:translateY(-14px);box-shadow:0 6px 16px rgba(23,89,90,.35);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;font-weight:700;gap:0;flex:none}
+.scrim{position:fixed;inset:0;background:rgba(27,42,47,.45);z-index:10;display:flex;align-items:flex-end;justify-content:center}
+.sheet{width:min(440px,100%);max-height:92vh;overflow-y:auto;background:#fff;border-radius:22px 22px 0 0;padding:8px 18px 24px}
+.sheet .grab{width:44px;height:5px;border-radius:3px;background:#CBD3D0;margin:6px auto 10px}
+.sheet h2{font-size:20px}
+.toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:#1B2A2F;color:#fff;padding:12px 18px;border-radius:12px;z-index:20;font-weight:700;max-width:90%}
+.proto{margin:14px 16px 0;font-size:13px;color:var(--muted)}
+.link{color:var(--accent);font-weight:700;background:none;border:0;padding:0;text-decoration:underline;text-underline-offset:3px}
+.actions3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}
+.act{min-height:60px;border-radius:14px;border:1px solid var(--line);background:#F4F7F6;color:var(--accent);font-weight:700;font-size:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;text-decoration:none;text-align:center;padding:4px}
+.cond-last{font-size:14px;color:var(--muted);margin-top:4px}
+.empty{padding:18px;color:var(--muted)}
+.appbar{position:sticky;top:0;z-index:4;background:var(--bg);display:flex;align-items:center;justify-content:space-between;padding:10px 12px 6px 18px}
+.appbar .brand{font-weight:700;font-size:15px;letter-spacing:.02em;color:var(--muted)}
+.menuscrim{position:fixed;inset:0;background:rgba(27,42,47,.35);z-index:10;display:flex;justify-content:center;align-items:flex-start}
+.menuwrap{width:min(440px,100%);display:flex;justify-content:flex-end;padding:64px 12px 0;pointer-events:none}
+.menupanel{pointer-events:auto;width:290px;background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 12px 30px rgba(27,42,47,.25)}
+.menupanel button{width:100%;min-height:58px;display:flex;align-items:center;gap:12px;padding:0 16px;border:0;border-bottom:1px solid var(--line);background:none;text-align:left;font-weight:700}
+.menupanel button:last-child{border-bottom:0}
+.menupanel .chip{margin-left:auto}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 16px 0}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px}
+.tnum{font-size:26px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
+.pnbox{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--accent-soft);border-radius:14px;padding:12px 14px;margin-bottom:12px}
+.pnum{font-size:24px;font-weight:700;color:var(--accent-soft-ink);font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.kv:last-child{border-bottom:0}
+.kv span:first-child{color:var(--muted)}
+.kv b{text-align:right}
+.urltext{font-size:13px;color:var(--muted);word-break:break-all;margin-top:6px}
+@media (prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.6}to{transform:none;opacity:1}}}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<div id="layer"></div>
+<div id="menu"></div>
+<div id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+var DAY=864e5, KEY="mymedical-data-v1";
+var MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+var MONL=["January","February","March","April","May","June","July","August","September","October","November","December"];
+var DOW=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+var KINDS={visit:"Visit",call:"Phone call",result:"Results",test:"Test or scan",collected:"Medicine collected",note:"Note",appointment:"Appointment"};
+var DTYPES=["GP","Cardiologist","Gastroenterologist","Urologist","Dermatologist","Respiratory","Surgeon","Dentist","Eyes","Other"];
+var PKINDS=["Hospital","Clinic","Dental","Optician","Pharmacy","Other"];
+var STATUS=["Ongoing","Monitoring","Resolved"];
+var INS={none:"Not claimed",submitted:"Submitted",paid:"Paid out",rejected:"Rejected"};
+
+var ICON={
+ down:'<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>',
+ menu:'<path d="M4 7h16M4 12h16M4 17h16"/>',
+ bill:'<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
+ shield:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
+ home:'<path d="M3 11l9-8 9 8M5 10v10h14V10"/>',
+ people:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>',
+ pill:'<path d="M10.5 20.5a5 5 0 0 1-7-7l10-10a5 5 0 0 1 7 7z"/><path d="M8.5 8.5l7 7"/>',
+ file:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>',
+ plus:'<path d="M12 5v14M5 12h14"/>',
+ back:'<path d="M15 5l-7 7 7 7"/>',
+ chev:'<path d="M9 5l7 7-7 7"/>',
+ phone:'<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/>',
+ pin:'<path d="M12 21s7-6.2 7-11a7 7 0 0 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>',
+ mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
+ ext:'<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
+ check:'<path d="M5 12l5 5 9-10"/>',
+ copy:'<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/>'
+};
+function ic(n,s){s=s||22;return '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+ICON[n]+'</svg>';}
+
+/* ---------- helpers ---------- */
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+var uidn=0;function uid(p){uidn++;return p+Date.now().toString(36)+uidn;}
+function sod(ts){var d=new Date(ts);d.setHours(0,0,0,0);return d.getTime();}
+function pad(n){return (n<10?"0":"")+n;}
+function dFull(ts){if(!ts)return "No date";var d=new Date(ts);return d.getDate()+" "+MON[d.getMonth()]+" "+d.getFullYear();}
+function dMon(ts){var d=new Date(ts);return MONL[d.getMonth()]+" "+d.getFullYear();}
+function tm(ts){var d=new Date(ts);if(d.getMilliseconds()===1)return "";return pad(d.getHours())+":"+pad(d.getMinutes());}
+function dStamp(ts){var d=new Date(ts);return DOW[d.getDay()]+" "+d.getDate()+" "+MON[d.getMonth()]+(tm(ts)?" · "+tm(ts):"");}
+function dLong(ts){var d=new Date(ts);return DOW[d.getDay()]+" "+d.getDate()+" "+MONL[d.getMonth()]+" "+d.getFullYear()+(tm(ts)?", "+tm(ts):"");}
+function relDays(n){
+  if(n===0)return "today"; if(n===1)return "yesterday"; if(n===-1)return "tomorrow";
+  var a=Math.abs(n), s;
+  if(a<60)s=a+" days"; else if(a<700)s=Math.round(a/30.4)+" months"; else s=(Math.round(a/36.5)/10)+" years";
+  return n>0?s+" ago":"in "+s;
+}
+function rel(ts){return relDays(Math.round((sod(Date.now())-sod(ts))/DAY));}
+function toLocalInput(ts){var d=new Date(ts);return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+"T"+pad(d.getHours())+":"+pad(d.getMinutes());}
+function toDateInput(ts){return toLocalInput(ts).slice(0,10);}
+function fromDateInput(s){return s?new Date(s+"T12:00").getTime():null;}
+function fromLocalInput(s){return s?new Date(s).getTime():Date.now();}
+function initials(n){var p=String(n).replace(/^(Dr\.?|Ms\.?|Mr\.?|Mrs\.?)\s+/i,"").split(/\s+/);return ((p[0]||"")[0]||"")+((p[1]||"")[0]||"");}
+function nowTs(){return Date.now();}
+function eur(n){return "€"+(Math.round((n||0)*100)/100).toFixed(2);}
+function safeUrl(u){u=String(u||"").trim();if(!u)return "";if(!/^https?:\/\//i.test(u))u="https://"+u;try{new URL(u);return u;}catch(e){return "";}}
+
+function tomorrow9(){var d=new Date();d.setDate(d.getDate()+1);d.setHours(9,0,0,0);return d.getTime();}
+
+/* ---------- data ---------- */
+var DATA={"allergies":"","places":[],"doctors":[],"conds":[],"meds":[],"events":[],"bills":[],"insurance":{"insurer":"","policyNumber":"","phone":"","url":"","notes":""}};
+function mkTs(d,t){var p=d.split("-"),h=12,m=0,ms=1;if(t){var q=t.split(":");h=+q[0];m=+q[1];ms=0;}return new Date(+p[0],+p[1]-1,+p[2],h,m,0,ms).getTime();}
+function seed(){
+  var D=JSON.parse(JSON.stringify(DATA));
+  D.events.forEach(function(e){e.ts=mkTs(e.d,e.t);delete e.d;delete e.t;});
+  D.conds.forEach(function(c){c.since=mkTs(c.since,null);});
+  D.bills.forEach(function(b){b.ts=b.d?mkTs(b.d,null):0;delete b.d;});
+  seedExtras(D);
+  return D;
+}
+function seedExtras(D){
+  if(!D.insurance)D.insurance={insurer:"",policyNumber:"",phone:"",url:"",notes:""};
+  if(!D.bills)D.bills=[];
+  if(D.allergies===undefined)D.allergies="";
+  D.places.forEach(function(p){if(p.patientNumber===undefined)p.patientNumber="";});
+}
+var D;
+function load(){try{var s=localStorage.getItem(KEY);if(s){var o=JSON.parse(s);if(o&&o.events){seedExtras(o);return o;}}}catch(e){}return seed();}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(D));}catch(e){}}
+D=load();
+
+function by(list,id){for(var i=0;i<list.length;i++)if(list[i].id===id)return list[i];return null;}
+function doc(id){return by(D.doctors,id);} function pl(id){return by(D.places,id);}
+function cond(id){return by(D.conds,id);} function med(id){return by(D.meds,id);} function evt(id){return by(D.events,id);}
+function sortDesc(a,b){return b.ts-a.ts;}
+function pastEvents(f){var n=Date.now();return D.events.filter(function(e){return e.kind!=="appointment"&&e.ts<=n&&(!f||f(e));}).sort(sortDesc);}
+function upcoming(f){var n=Date.now();return D.events.filter(function(e){return e.kind==="appointment"&&e.ts>=n&&(!f||f(e));}).sort(function(a,b){return a.ts-b.ts;});}
+function unconfirmed(){var n=Date.now();return D.events.filter(function(e){return e.kind==="appointment"&&e.ts<n;}).sort(sortDesc);}
+function lastVisit(did){return pastEvents(function(e){return e.doctorId===did&&e.kind==="visit";})[0]||null;}
+function medLeft(m){if(!m.lastCollected||!m.supplyDays)return {out:null,days:9999,frac:1,unknown:true};var out=m.lastCollected+m.supplyDays*DAY;return {out:out,days:Math.ceil((out-Date.now())/DAY),frac:Math.max(0,Math.min(1,(out-Date.now())/(m.supplyDays*DAY)))};}
+function who(e){var d=doc(e.doctorId),p=pl(e.placeId),a=[];if(d)a.push(d.name);if(p)a.push(p.name);return a.join(" · ");}
+
+/* ---------- state ---------- */
+var S={tab:"home",stack:[],sheet:null,seg:{people:"doctors",record:"summary"},dfilter:"All",tfilter:"all",confirm:null,bfilter:"action",menu:false};
+var $app=document.getElementById("app"),$layer=document.getElementById("layer"),$toast=document.getElementById("toast");
+var toastTimer;
+function toast(t){$toast.innerHTML='<div class="toast" role="status">'+esc(t)+'</div>';clearTimeout(toastTimer);toastTimer=setTimeout(function(){$toast.innerHTML="";},2600);}
+
+/* ---------- view pieces ---------- */
+function top(title,right){
+  return '<div class="top"><button class="iconbtn" data-act="back" aria-label="Back">'+ic("back",24)+'</button><div class="t">'+esc(title)+'</div>'+(right||'<span style="width:48px"></span>')+'</div>';
+}
+function evRow(e){
+  var d=new Date(e.ts);
+  return '<button class="row" data-act="open" data-v="event" data-id="'+e.id+'">'+
+    '<span class="date"><b>'+d.getDate()+'</b><span>'+MON[d.getMonth()]+'</span></span>'+
+    '<span class="grow"><span class="kind">'+KINDS[e.kind]+(tm(e.ts)?' · '+tm(e.ts):'')+'</span><span class="name" style="display:block">'+esc(e.title)+'</span><span class="meta">'+esc(who(e))+'</span>'+(e.notRecorded?'<span class="chip warn" style="margin-top:4px">Not recorded yet</span>':'')+'</span>'+
+    '<span style="color:var(--muted)">'+ic("chev",18)+'</span></button>';
+}
+function listCard(html){return '<div class="card" style="overflow:hidden">'+html+'</div>';}
+
+/* ---------- HOME ---------- */
+function vHome(){
+  var now=new Date(), h=now.getHours();
+  var greet=h<12?"Good morning":(h<18?"Good afternoon":"Good evening");
+  var nx=upcoming()[0], out='';
+  out+='<div class="pad" style="padding-top:6px"><div class="sub">'+DOW[now.getDay()]+" "+now.getDate()+" "+MONL[now.getMonth()]+'</div><h1 class="big">'+greet+'</h1></div>';
+  if(nx){
+    var d=doc(nx.doctorId),p=pl(nx.placeId);
+    out+='<div class="hero"><div class="eyebrow">NEXT APPOINTMENT</div><div class="big2">'+dStamp(nx.ts)+'</div><div class="line2">'+esc(d?d.name+(d.type?" · "+d.type:""):"No doctor chosen")+'</div><div class="line2" style="opacity:.85">'+esc(nx.title)+(p?" · "+esc(p.name):"")+'</div>'+
+      '<div class="btnrow">'+(d?'<button class="btn onhero flex1" data-act="open" data-v="doctor" data-id="'+d.id+'">Open visit sheet</button>':'<button class="btn onhero flex1" data-act="open" data-v="event" data-id="'+nx.id+'">Open</button>')+
+      (p?'<a class="btn ghosthero" href="'+mapUrl(p)+'" target="_blank" rel="noopener">Directions</a>':'')+'</div></div>';
+  }else{
+    out+='<div class="hero"><div class="eyebrow">NEXT APPOINTMENT</div><div class="big2">Nothing booked</div><div class="btnrow"><button class="btn onhero flex1" data-act="new" data-kind="appointment">Add an appointment</button></div></div>';
+  }
+  if(!D.events.length&&!D.doctors.length)out+='<div class="card pad16" style="margin-top:12px"><h2 style="font-size:18px">Nothing here yet</h2><p class="sub" style="margin-top:4px">Load a backup file, or start by logging your first visit.</p><button class="btn primary block" style="margin-top:12px" data-act="menu-go" data-v="backup">Load a backup file</button></div>';
+  out+='<div class="sec"><span>Log something now</span></div><div class="pad chips">'+
+    ["visit","call","result","test","note"].map(function(k){return '<button class="fchip" data-act="new" data-kind="'+k+'">'+KINDS[k]+'</button>';}).join("")+'</div>';
+  var att=attention();
+  if(att){out+='<div class="sec"><span>Needs attention</span></div>'+att;}
+  var bt=billTotals();
+  out+='<div class="sec"><span>Bills</span><button class="textbtn" data-act="menu-go" data-v="bills">Open</button></div><div class="tiles" style="margin-top:0"><button class="tile" data-act="menu-go" data-v="bills" style="text-align:left"><div class="lbl">You owe</div><div class="tnum">'+eur(bt.owe)+'</div><div class="sub">'+bt.unpaid+' unpaid</div></button><button class="tile" data-act="menu-go" data-v="insurance" style="text-align:left"><div class="lbl">Insurance owes you</div><div class="tnum">'+eur(bt.back)+'</div><div class="sub">'+bt.wait+' claim'+(bt.wait===1?'':'s')+' waiting</div></button></div>';
+  out+='<div class="sec"><span>Recent activity</span><button class="textbtn" data-act="goto-record" data-seg="timeline">See all</button></div>';
+  out+=listCard(pastEvents().slice(0,4).map(evRow).join("")||'<div class="empty">Nothing logged yet.</div>');
+  out+='<p class="proto">Your data stays in this browser only. Use <button class="link" data-act="menu-go" data-v="backup">Backup and restore</button> to save a copy or load one.</p>';
+  return out;
+}
+function attention(){
+  var out='';
+  D.meds.filter(function(m){return m.active;}).map(function(m){return {m:m,l:medLeft(m)};}).filter(function(x){return x.l.days<=7;}).sort(function(a,b){return a.l.days-b.l.days;}).forEach(function(x){
+    out+='<button class="attn" data-act="open" data-v="med" data-id="'+x.m.id+'">'+esc(x.m.name)+' '+(x.l.days<0?'ran out '+relDays(-x.l.days).replace("in ","")+' ago':x.l.days===0?'runs out today':'runs out in '+x.l.days+' day'+(x.l.days===1?'':'s'))+'<small>Last collected '+rel(x.m.lastCollected)+'. Tap to update.</small></button>';
+  });
+  D.doctors.filter(function(d){return d.type==="Dentist"||d.type==="Eyes";}).forEach(function(d){
+    var lv=lastVisit(d.id);
+    if(lv&&Date.now()-lv.ts>365*DAY&&!upcoming(function(e){return e.doctorId===d.id;}).length)
+      out+='<button class="attn" data-act="open" data-v="doctor" data-id="'+d.id+'">'+esc(d.type)+' check-up is due<small>Last seen '+rel(lv.ts)+' ('+esc(d.name)+')</small></button>';
+  });
+  unconfirmed().forEach(function(e){
+    out+='<button class="attn" data-act="open" data-v="event" data-id="'+e.id+'">Did this appointment happen?<small>'+esc(e.title)+' · '+dStamp(e.ts)+'</small></button>';
+  });
+  var nrc=D.events.filter(function(e){return e.notRecorded;}).length;
+  if(nrc)out+='<button class="attn" data-act="to-record">'+nrc+' entr'+(nrc===1?'y is':'ies are')+' not recorded yet<small>Marked as not done in your spreadsheet. Tap to review.</small></button>';
+  var nck=D.bills.filter(function(b){return b.paid===null;}).length;
+  if(nck)out+='<button class="attn" data-act="to-check">'+nck+' bill'+(nck===1?' has':'s have')+' no paid status<small>Your spreadsheet left Paid blank. Tap to check them.</small></button>';
+  D.bills.filter(billOverdue).sort(function(a,b){return a.dueTs-b.dueTs;}).forEach(function(b){
+    out+='<button class="attn" data-act="open" data-v="bill" data-id="'+b.id+'">Bill overdue: '+esc(b.provider)+' '+eur(b.amount)+'<small>Was due '+rel(b.dueTs)+'. Tap to pay or update.</small></button>';
+  });
+  D.bills.filter(function(b){var d=Math.round((sod(b.dueTs)-sod(Date.now()))/DAY);return b.paid===false&&b.dueTs&&d>=0&&d<=7;}).forEach(function(b){
+    out+='<button class="attn" data-act="open" data-v="bill" data-id="'+b.id+'">Bill due soon: '+esc(b.provider)+' '+eur(b.amount)+'<small>Due '+relDays(Math.round((sod(Date.now())-sod(b.dueTs))/DAY))+'.</small></button>';
+  });
+  return out;
+}
+function mapUrl(p){return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent((p.name+" "+(p.address||"")).trim());}
+
+/* ---------- PEOPLE ---------- */
+function vPeople(){
+  var out='<div class="top" style="padding-top:6px"><h1 class="big" style="flex:1;padding-left:8px">Doctors</h1><button class="iconbtn solid" data-act="add-doctor" aria-label="Add doctor">'+ic("plus",24)+'</button></div>';
+  out+='<div class="pad chips" style="margin-top:8px">'+["All"].concat(DTYPES).map(function(t){return '<button class="fchip '+(S.dfilter===t?"on":"")+'" data-act="dfilter" data-v="'+t+'">'+t+'</button>';}).join("")+'</div><div style="height:12px"></div>';
+  var list=D.doctors.filter(function(d){return S.dfilter==="All"||d.type===S.dfilter;});
+  out+=listCard(list.map(function(d){
+    var lv=lastVisit(d.id),p=pl(d.placeId);
+    return '<button class="row" data-act="open" data-v="doctor" data-id="'+d.id+'"><span class="avatar">'+esc(initials(d.name))+'</span><span class="grow"><span class="name" style="display:block">'+esc(d.name)+'</span><span class="meta">'+esc(d.type)+(p?" · "+esc(p.name):"")+'</span><span class="meta" style="display:block">'+(lv?"Last visit "+rel(lv.ts):"No visits logged")+'</span></span><span style="color:var(--muted)">'+ic("chev",18)+'</span></button>';
+  }).join("")||'<div class="empty">No doctors of this type yet.</div>');
+  return out;
+}
+function placeRow(p){
+  var n=D.doctors.filter(function(d){return d.placeId===p.id;}).length;
+  return '<button class="row" data-act="open" data-v="place" data-id="'+p.id+'"><span class="avatar">'+ic("pin",20)+'</span><span class="grow"><span class="name" style="display:block">'+esc(p.name)+'</span><span class="meta">'+esc(p.kind)+(p.address?" · "+esc(p.address):"")+'</span><span class="meta" style="display:block">'+(p.patientNumber?"Patient no. "+esc(p.patientNumber)+" · ":"")+n+' doctor'+(n===1?"":"s")+' linked</span></span><span style="color:var(--muted)">'+ic("chev",18)+'</span></button>';
+}
+function vPlaces(){
+  var out=top("Hospitals and places",'<button class="iconbtn solid" data-act="add-place" aria-label="Add a hospital or place">'+ic("plus",24)+'</button>');
+  out+='<div style="height:6px"></div>'+listCard(D.places.map(placeRow).join("")||'<div class="empty">No places yet.</div>');
+  return out;
+}
+function pnHtml(p){
+  if(p.patientNumber)return '<div class="pnbox"><div><div class="lbl" style="color:#35585a">Your patient number</div><div class="pnum">'+esc(p.patientNumber)+'</div></div><button class="btn primary" style="min-height:48px" data-act="copy" data-text="'+esc(p.patientNumber)+'">'+ic("copy",18)+' Copy</button></div>';
+  return '<div class="pnbox"><div><div class="lbl" style="color:#35585a">Patient number</div><div style="font-weight:700">Not added yet</div></div><button class="btn" style="min-height:48px" data-act="edit-place" data-id="'+p.id+'">Add</button></div>';
+}
+
+/* ---------- DOCTOR (visit sheet) ---------- */
+function vDoctor(id){
+  var d=doc(id); if(!d)return top("Doctor")+'<div class="empty">Not found.</div>';
+  var p=pl(d.placeId), lv=lastVisit(d.id), nx=upcoming(function(e){return e.doctorId===d.id;})[0];
+  var hist=pastEvents(function(e){return e.doctorId===d.id&&e.kind!=="collected";});
+  var meds=D.meds.filter(function(m){return m.doctorId===d.id&&m.active;});
+  var out=top("Visit sheet",'<button class="textbtn" data-act="edit-doctor" data-id="'+d.id+'">Edit</button>');
+  out+='<div class="card pad16"><div style="display:flex;gap:14px;align-items:center"><div class="avatar lg" role="img" aria-label="Photo placeholder">'+esc(initials(d.name))+'</div><div><h1 style="font-size:20px">'+esc(d.name)+'</h1><div class="sub">'+esc(d.type)+(d.notes?" · "+esc(d.notes):"")+'</div>'+
+    (p?'<button class="link" data-act="open" data-v="place" data-id="'+p.id+'" style="margin-top:2px">'+esc(p.name)+'</button>'+(p.patientNumber?'<div class="sub">Patient no. <b>'+esc(p.patientNumber)+'</b> <button class="link" data-act="copy" data-text="'+esc(p.patientNumber)+'">Copy</button></div>':''):'<div class="sub">No place linked</div>')+'</div></div>';
+  out+='<div class="actions3">'+
+    (d.phone?'<a class="act" href="tel:'+esc(d.phone.replace(/\s+/g,""))+'">'+ic("phone",20)+'Call<span style="font-weight:400;font-size:12px;color:var(--muted)">'+esc(d.phone)+'</span></a>':'<span class="act" style="color:var(--muted)">'+ic("phone",20)+'No number</span>')+
+    (p?'<a class="act" href="'+mapUrl(p)+'" target="_blank" rel="noopener">'+ic("pin",20)+'Directions</a>':'<span class="act" style="color:var(--muted)">'+ic("pin",20)+'No place</span>')+
+    (d.email?'<a class="act" href="mailto:'+esc(d.email)+'">'+ic("mail",20)+'Email</a>':'<span class="act" style="color:var(--muted)">'+ic("mail",20)+'No email</span>')+'</div></div>';
+  if(nx)out+='<div class="hero" style="margin-top:12px;padding:12px 16px;display:flex;justify-content:space-between;gap:10px;align-items:center"><div><div class="eyebrow">NEXT APPOINTMENT</div><div style="font-weight:700;font-size:17px">'+dStamp(nx.ts)+'</div></div><div class="line2" style="text-align:right">'+esc(nx.title)+'</div></div>';
+  out+='<div class="sec"><span>Last visit'+(lv?' · '+dFull(lv.ts):'')+'</span></div>';
+  if(lv){
+    out+='<div class="card pad16"><div class="sub">'+rel(lv.ts)+(tm(lv.ts)?' · '+tm(lv.ts):'')+(lv.condId&&cond(lv.condId)?' · '+esc(cond(lv.condId).name):'')+'</div><h3 style="font-size:17px;margin-top:2px">'+esc(lv.title)+'</h3><p class="note" style="margin-top:8px">'+esc(lv.notes||"No notes.")+'</p>'+(lv.docName&&!lv.letterUrl?'<p class="sub" style="margin-top:8px">Document: '+esc(lv.docName)+'</p>':'')+
+      (lv.letterUrl?'<a class="btn block" style="margin-top:12px;justify-content:space-between" href="'+esc(safeUrl(lv.letterUrl))+'" target="_blank" rel="noopener"><span>Open document (Google Drive)</span>'+ic("ext",18)+'</a>':'')+
+      '<button class="link" style="margin-top:12px" data-act="open" data-v="event" data-id="'+lv.id+'">View or edit this entry</button></div>';
+  }else out+='<div class="card empty">No visits logged yet.</div>';
+  if(d.undated&&d.undated.length)out+='<div class="sec"><span>Notes with no date</span></div><div class="card pad16 note">'+d.undated.map(esc).join("\n\n")+'</div>';
+  out+='<div class="sec"><span>Raise next time</span></div><div class="card" style="overflow:hidden">';
+  out+=d.raise.map(function(r,i){return '<button class="check '+(r.done?"done":"")+'" data-act="raise-toggle" data-id="'+d.id+'" data-i="'+i+'"><span class="box '+(r.done?"on":"")+'">'+(r.done?ic("check",16):"")+'</span><span class="tx">'+esc(r.t)+'</span></button>';}).join("");
+  out+='<div class="inline"><input id="raiseInput" type="text" placeholder="Add a question or reminder" aria-label="Add a question or reminder"><button class="btn primary" data-act="raise-add" data-id="'+d.id+'" style="min-height:48px">Add</button></div></div>';
+  if(meds.length){out+='<div class="sec"><span>Medicines from this doctor</span></div>'+listCard(meds.map(medRow).join(""));}
+  out+='<div class="pad btnrow" style="margin-top:20px"><button class="btn primary flex1" data-act="new" data-kind="visit" data-doc="'+d.id+'">Log today\'s visit</button><button class="btn flex1" data-act="new" data-kind="call" data-doc="'+d.id+'">Log a call</button></div>';
+  out+='<div class="sec"><span>All history with '+esc(d.name.split(" ").slice(-1)[0])+'</span></div>';
+  out+=listCard(hist.map(evRow).join("")||'<div class="empty">Nothing logged yet.</div>');
+  return out;
+}
+
+/* ---------- PLACE ---------- */
+function vPlace(id){
+  var p=pl(id); if(!p)return top("Place")+'<div class="empty">Not found.</div>';
+  var docs=D.doctors.filter(function(d){return d.placeId===p.id;});
+  var evs=pastEvents(function(e){return e.placeId===p.id&&e.kind!=="collected";}).slice(0,8);
+  var out=top(p.name,'<button class="textbtn" data-act="edit-place" data-id="'+p.id+'">Edit</button>');
+  out+='<div class="card pad16">'+pnHtml(p)+'<span class="chip plain">'+esc(p.kind)+'</span><p style="margin-top:8px;font-weight:700">'+esc(p.address||"No address yet")+'</p><div class="actions3" style="grid-template-columns:repeat(2,minmax(0,1fr))">'+
+    (p.phone?'<a class="act" href="tel:'+esc(p.phone.replace(/\s+/g,""))+'">'+ic("phone",20)+'Call<span style="font-weight:400;font-size:12px;color:var(--muted)">'+esc(p.phone)+'</span></a>':'<span class="act" style="color:var(--muted)">No number</span>')+
+    '<a class="act" href="'+mapUrl(p)+'" target="_blank" rel="noopener">'+ic("pin",20)+'Directions</a></div></div>';
+  out+='<div class="sec"><span>Doctors seen here</span></div>'+listCard(docs.map(function(d){return '<button class="row" data-act="open" data-v="doctor" data-id="'+d.id+'"><span class="avatar">'+esc(initials(d.name))+'</span><span class="grow"><span class="name" style="display:block">'+esc(d.name)+'</span><span class="meta">'+esc(d.type)+'</span></span><span style="color:var(--muted)">'+ic("chev",18)+'</span></button>';}).join("")||'<div class="empty">No doctors linked to this place.</div>');
+  out+='<div class="sec"><span>What happened here</span></div>'+listCard(evs.map(evRow).join("")||'<div class="empty">Nothing logged here yet.</div>');
+  return out;
+}
+
+/* ---------- MEDS ---------- */
+function runText(m,l){return l.days<0?"Ran out "+relDays(-l.days).replace(" ago","")+" ago":l.days===0?"Runs out today":"Runs out in "+l.days+" day"+(l.days===1?"":"s");}
+function medRow(m){
+  var l=medLeft(m), low=!l.unknown&&l.days<=7, line;
+  if(!m.active)line="Last collected "+(m.lastCollected?dFull(m.lastCollected):"not recorded");
+  else if(l.unknown)line="Add when you last collected it to track supply";
+  else line=runText(m,l)+" (about "+dFull(l.out)+")";
+  return '<button class="row" data-act="open" data-v="med" data-id="'+m.id+'"><span class="grow"><span class="name" style="display:block">'+esc(m.name)+' '+esc(m.dose)+'</span><span class="meta">'+esc(m.schedule)+'</span><span class="meta" style="display:block">'+line+'</span></span>'+(m.active&&low?'<span class="chip warn">Low</span>':'')+'<span style="color:var(--muted)">'+ic("chev",18)+'</span></button>';
+}
+function vMeds(){
+  var out='<div class="top" style="padding-top:6px"><h1 class="big" style="flex:1;padding-left:8px">Medication</h1><button class="iconbtn solid" data-act="add-med" aria-label="Add medication">'+ic("plus",24)+'</button></div>';
+  out+='<div class="seg"><button class="'+(S.seg.meds!=="past"?"on":"")+'" data-act="seg" data-k="meds" data-v="current">Current</button><button class="'+(S.seg.meds==="past"?"on":"")+'" data-act="seg" data-k="meds" data-v="past">Past</button></div>';
+  out+='<div class="card pad16" style="margin-top:12px"><span class="lbl">Allergies</span><div style="display:flex;justify-content:space-between;align-items:center"><b>'+esc(D.allergies||"None recorded")+'</b><button class="textbtn" data-act="edit-allergies">Edit</button></div></div>';
+  if(S.seg.meds==="past"){
+    out+='<div style="height:14px"></div>'+listCard(D.meds.filter(function(m){return !m.active;}).map(medRow).join("")||'<div class="empty">No past medication.</div>');
+  }else{
+    var cur=D.meds.filter(function(m){return m.active;}).sort(function(a,b){return medLeft(a).days-medLeft(b).days;});
+    out+='<div class="sec"><span>Soonest to run out first</span></div>';
+    out+=cur.map(function(m){
+      var l=medLeft(m),low=!l.unknown&&l.days<=7,d=doc(m.doctorId),p=pl(m.placeId);
+      var body;
+      if(l.unknown){
+        body='<div style="margin-top:10px;font-size:15px">'+(m.lastCollected?'Last collected <b>'+dFull(m.lastCollected)+'</b> ('+rel(m.lastCollected)+')':'Last collected: <b>not recorded</b>')+'</div><div class="sub" style="margin-top:4px">'+(m.supplyDays?'':'Add how many days one collection lasts, ')+'and the app will work out when you run out.</div>'+
+          '<button class="btn block" style="margin-top:10px" data-act="edit-med" data-id="'+m.id+'">Add supply details</button>';
+      }else{
+        body='<div style="margin-top:10px;font-size:15px">Last collected <b>'+dFull(m.lastCollected)+'</b> ('+rel(m.lastCollected)+')</div>'+
+        '<div style="font-size:15px">'+(low?'<span class="chip warn">'+runText(m,l)+'</span> ':'<b>'+runText(m,l)+'</b> ')+'about '+dFull(l.out)+'</div>'+
+        '<div class="meter '+(low?"low":"")+'" role="img" aria-label="'+Math.round(l.frac*100)+' percent of supply left"><i style="width:'+Math.round(l.frac*100)+'%"></i></div>';
+      }
+      return '<div class="card pad16" style="margin-bottom:12px"><button class="row" style="padding:0;min-height:0;border:0" data-act="open" data-v="med" data-id="'+m.id+'"><span class="grow"><span class="name" style="display:block;font-size:18px">'+esc(m.name)+' <span style="color:var(--accent)">'+esc(m.dose)+'</span></span><span class="meta">'+esc(m.schedule)+'</span></span><span style="color:var(--muted)">'+ic("chev",18)+'</span></button>'+body+
+        '<div class="meta" style="margin-top:8px">'+(d?esc(d.name):"Prescriber not recorded")+(p?" · "+esc(p.name):"")+'</div>'+
+        '<button class="btn primary block" style="margin-top:12px" data-act="collected" data-id="'+m.id+'">'+ic("check",20)+' Collected today</button></div>';
+    }).join("")||'<div class="card empty">No current medication.</div>';
+  }
+  return out;
+}
+function vMed(id){
+  var m=med(id); if(!m)return top("Medicine")+'<div class="empty">Not found.</div>';
+  var l=medLeft(m),d=doc(m.doctorId),p=pl(m.placeId),c=cond(m.condId);
+  var hist=pastEvents(function(e){return e.kind==="collected"&&e.medId===m.id;});
+  var out=top(m.name,'<button class="textbtn" data-act="edit-med" data-id="'+m.id+'">Edit</button>');
+  out+='<div class="card pad16"><div style="display:flex;justify-content:space-between"><div><div style="font-size:22px;font-weight:700">'+esc(m.name)+' '+esc(m.dose)+'</div><div class="sub">'+esc(m.schedule)+'</div></div><span class="chip '+(m.active?"":"plain")+'">'+(m.active?"Current":"Stopped")+'</span></div>'+
+    '<div class="sec" style="margin:16px 0 6px"><span>Supply</span></div><div>Last collected <b>'+(m.lastCollected?dFull(m.lastCollected)+'</b>, '+rel(m.lastCollected):'not recorded</b>')+'</div><div>Supply lasts <b>'+(m.supplyDays?m.supplyDays+' days':'not set')+'</b></div>'+
+    (m.active&&!l.unknown?'<div style="margin-top:4px">Likely to run out <b>'+dFull(l.out)+'</b> ('+relDays(-l.days)+')</div><div class="meter '+(l.days<=7?"low":"")+'"><i style="width:'+Math.round(l.frac*100)+'%"></i></div>':'')+
+    (m.active?'<button class="btn primary block" style="margin-top:14px" data-act="collected" data-id="'+m.id+'">'+ic("check",20)+' Collected today</button>':'')+'</div>';
+  out+='<div class="sec"><span>Linked to</span></div><div class="card" style="overflow:hidden">'+
+    (d?'<button class="row" data-act="open" data-v="doctor" data-id="'+d.id+'"><span class="avatar">'+esc(initials(d.name))+'</span><span class="grow"><span class="meta">Prescribed by</span><span class="name" style="display:block">'+esc(d.name)+'</span></span></button>':'<div class="row"><span class="grow"><span class="meta">Prescribed by</span><span class="name" style="display:block">Not recorded</span></span></div>')+
+    (p?'<button class="row" data-act="open" data-v="place" data-id="'+p.id+'"><span class="avatar">'+ic("pin",20)+'</span><span class="grow"><span class="meta">Collected from</span><span class="name" style="display:block">'+esc(p.name)+'</span></span></button>':'')+
+    (c?'<button class="row" data-act="open" data-v="cond" data-id="'+c.id+'"><span class="avatar">'+ic("file",20)+'</span><span class="grow"><span class="meta">For</span><span class="name" style="display:block">'+esc(c.name)+'</span></span></button>':'')+'</div>';
+  if(m.notes)out+='<div class="card pad16 note" style="margin-top:12px">'+esc(m.notes)+'</div>';
+  out+='<div class="sec"><span>Collection history</span></div>'+listCard(hist.map(evRow).join("")||'<div class="empty">No collections logged.</div>');
+  return out;
+}
+
+/* ---------- RECORD ---------- */
+function summaryText(){
+  var t="HEALTH SUMMARY\nPrepared "+dFull(Date.now())+"\n\nALLERGIES\n"+(D.allergies||"None recorded")+"\n\nMAIN HEALTH ISSUES\n";
+  condsSorted().forEach(function(c){var le=lastEvt(c.id);t+="- "+c.name+" ("+c.status+", since "+dMon(c.since)+")"+(le?"; last: "+KINDS[le.kind].toLowerCase()+" on "+dFull(le.ts):"")+"\n";});
+  t+="\nCURRENT MEDICATION\n";D.meds.filter(function(m){return m.active;}).forEach(function(m){var d=doc(m.doctorId);t+="- "+m.name+" "+m.dose+", "+m.schedule+(d?" ("+d.name+")":"")+"\n";});
+  t+="\nMY DOCTORS\n";D.doctors.forEach(function(d){var p=pl(d.placeId);t+="- "+d.name+", "+d.type+(p?", "+p.name:"")+(d.phone?", "+d.phone:"")+"\n";});
+  var n=upcoming()[0];if(n){t+="\nNEXT APPOINTMENT\n"+dStamp(n.ts)+", "+(doc(n.doctorId)?doc(n.doctorId).name:"")+", "+n.title+"\n";}
+  return t;
+}
+function condsSorted(){var o={Ongoing:0,Monitoring:1,Resolved:2};return D.conds.slice().sort(function(a,b){return (o[a.status]-o[b.status])||(lastTs(b.id)-lastTs(a.id));});}
+function lastEvt(cid){return pastEvents(function(e){return e.condId===cid&&e.kind!=="collected";})[0]||null;}
+function lastTs(cid){var e=lastEvt(cid);return e?e.ts:0;}
+function vRecord(){
+  var seg=S.seg.record;
+  var out='<div class="top" style="padding-top:6px"><h1 class="big" style="flex:1;padding-left:8px">My record</h1><button class="iconbtn solid" data-act="new" data-kind="note" aria-label="Log something">'+ic("plus",24)+'</button></div>';
+  out+='<div class="seg"><button class="'+(seg==="summary"?"on":"")+'" data-act="seg" data-k="record" data-v="summary">Summary</button><button class="'+(seg==="timeline"?"on":"")+'" data-act="seg" data-k="record" data-v="timeline">Timeline</button></div>';
+  if(seg==="summary"){
+    out+='<p class="proto" style="margin-top:12px">What to tell a doctor who asks "what is going on with you?". Updated '+dFull(Date.now())+'.</p>';
+    out+='<div class="sec"><span>Main health issues</span><button class="textbtn" data-act="add-cond">Add</button></div>';
+    out+=listCard(condsSorted().map(function(c){
+      var le=lastEvt(c.id),n=D.events.filter(function(e){return e.condId===c.id&&e.kind!=="collected";}).length;
+      return '<button class="row" data-act="open" data-v="cond" data-id="'+c.id+'" style="align-items:flex-start"><span class="grow"><span class="name" style="display:block">'+esc(c.name)+'</span><span class="meta">Since '+dMon(c.since)+' · '+n+' entr'+(n===1?"y":"ies")+'</span>'+(le?'<span class="cond-last" style="display:block">Last: '+KINDS[le.kind].toLowerCase()+', '+dFull(le.ts)+(doc(le.doctorId)?' with '+esc(doc(le.doctorId).name):'')+'</span>':'')+'</span><span class="chip '+(c.status==="Resolved"?"plain":c.status==="Monitoring"?"warn":"")+'">'+c.status+'</span></button>';
+    }).join("")||'<div class="empty">No health issues added.</div>');
+    out+='<div class="sec"><span>Allergies</span><button class="textbtn" data-act="edit-allergies">Edit</button></div><div class="card pad16"><b>'+esc(D.allergies||"None recorded")+'</b></div>';
+    out+='<div class="sec"><span>Current medication</span></div>'+listCard(D.meds.filter(function(m){return m.active;}).map(medRow).join(""));
+    out+='<div class="sec"><span>My doctors</span></div>'+listCard(D.doctors.map(function(d){var lv=lastVisit(d.id),p=pl(d.placeId);return '<button class="row" data-act="open" data-v="doctor" data-id="'+d.id+'"><span class="avatar">'+esc(initials(d.name))+'</span><span class="grow"><span class="name" style="display:block">'+esc(d.name)+'</span><span class="meta">'+esc(d.type)+(p?" · "+esc(p.name):"")+'</span><span class="meta" style="display:block">'+(lv?"Last visit "+dFull(lv.ts):"No visits logged")+'</span></span></button>';}).join(""));
+    out+='<div class="pad" style="margin-top:20px"><button class="btn primary block" data-act="copy-summary">'+ic("copy",20)+' Copy summary as text</button><p class="proto" style="margin:8px 0 0">Paste it into a message or document. In the finished app this would save as a PDF.</p></div>';
+  }else{
+    var f=S.tfilter;
+    out+='<div class="pad chips" style="margin-top:14px">'+[["all","Everything"],["visit","Visits"],["call","Calls"],["result","Results"],["test","Tests"],["collected","Medicine"],["note","Notes"],["torecord","To record"]].map(function(x){return '<button class="fchip '+(f===x[0]?"on":"")+'" data-act="tfilter" data-v="'+x[0]+'">'+x[1]+'</button>';}).join("")+'</div>';
+    var up=f==="all"?upcoming():[];
+    if(up.length){out+='<div class="tl-month">Upcoming</div>'+listCard(up.map(evRow).join(""));}
+    var evs=pastEvents(function(e){return f==="all"||(f==="torecord"?e.notRecorded:e.kind===f);}),last="",buf="";
+    evs.forEach(function(e){var m=dMon(e.ts);if(m!==last){if(buf)out+=listCard(buf);buf="";out+='<div class="tl-month">'+m+'</div>';last=m;}buf+=evRow(e);});
+    if(buf)out+=listCard(buf);
+    if(!evs.length&&!up.length)out+='<div class="card empty" style="margin-top:14px">Nothing here yet.</div>';
+  }
+  return out;
+}
+
+/* ---------- CONDITION ---------- */
+function vCond(id){
+  var c=cond(id); if(!c)return top("Health issue")+'<div class="empty">Not found.</div>';
+  var evs=pastEvents(function(e){return e.condId===c.id&&e.kind!=="collected";});
+  var ms=D.meds.filter(function(m){return m.condId===c.id;});
+  var dids={};D.events.forEach(function(e){if(e.condId===c.id&&e.doctorId)dids[e.doctorId]=1;});
+  var out=top(c.name,'<button class="textbtn" data-act="edit-cond" data-id="'+c.id+'">Edit</button>');
+  out+='<div class="card pad16"><span class="chip '+(c.status==="Resolved"?"plain":c.status==="Monitoring"?"warn":"")+'">'+c.status+'</span><p style="margin-top:8px">Since <b>'+dMon(c.since)+'</b> ('+rel(c.since)+')</p>'+(c.notes?'<p class="note" style="margin-top:8px">'+esc(c.notes)+'</p>':'')+'<button class="btn primary block" style="margin-top:14px" data-act="new" data-kind="visit" data-cond="'+c.id+'">Log something about this</button></div>';
+  var dl=Object.keys(dids).map(doc).filter(Boolean);
+  if(dl.length)out+='<div class="sec"><span>Doctors involved</span></div>'+listCard(dl.map(function(d){return '<button class="row" data-act="open" data-v="doctor" data-id="'+d.id+'"><span class="avatar">'+esc(initials(d.name))+'</span><span class="grow"><span class="name" style="display:block">'+esc(d.name)+'</span><span class="meta">'+esc(d.type)+'</span></span></button>';}).join(""));
+  if(ms.length)out+='<div class="sec"><span>Medication for this</span></div>'+listCard(ms.map(medRow).join(""));
+  out+='<div class="sec"><span>What happened, newest first</span></div>'+listCard(evs.map(evRow).join("")||'<div class="empty">Nothing logged yet.</div>');
+  return out;
+}
+
+/* ---------- EVENT ---------- */
+function vEvent(id){
+  var e=evt(id); if(!e)return top("Entry")+'<div class="empty">Not found.</div>';
+  var d=doc(e.doctorId),p=pl(e.placeId),c=cond(e.condId),m=med(e.medId);
+  var out=top(KINDS[e.kind],'<button class="textbtn" data-act="edit-event" data-id="'+e.id+'">Edit</button>');
+  out+='<div class="card pad16"><div class="kind">'+KINDS[e.kind]+'</div><h1 style="font-size:22px;margin-top:2px">'+esc(e.title)+'</h1><p class="sub" style="margin-top:4px">'+dLong(e.ts)+'<br>'+(e.ts>Date.now()?rel(e.ts):rel(e.ts))+'</p>'+(e.notes?'<p class="note" style="margin-top:12px">'+esc(e.notes)+'</p>':'<p class="sub" style="margin-top:12px">No notes.</p>')+(e.docName&&!e.letterUrl?'<p class="sub" style="margin-top:12px">Document: '+esc(e.docName)+'</p>':'')+(e.notRecorded?'<p style="margin-top:12px"><span class="chip warn">Not recorded yet</span></p>':'')+
+    (e.letterUrl?'<a class="btn block" style="margin-top:14px;justify-content:space-between" href="'+esc(safeUrl(e.letterUrl))+'" target="_blank" rel="noopener"><span>Open document (Google Drive)</span>'+ic("ext",18)+'</a>':'')+'</div>';
+  out+='<div class="sec"><span>Connected to</span></div><div class="card" style="overflow:hidden">'+
+    (d?'<button class="row" data-act="open" data-v="doctor" data-id="'+d.id+'"><span class="avatar">'+esc(initials(d.name))+'</span><span class="grow"><span class="meta">With</span><span class="name" style="display:block">'+esc(d.name)+' · '+esc(d.type)+'</span></span></button>':'')+
+    (p?'<button class="row" data-act="open" data-v="place" data-id="'+p.id+'"><span class="avatar">'+ic("pin",20)+'</span><span class="grow"><span class="meta">Where</span><span class="name" style="display:block">'+esc(p.name)+'</span></span></button>':'')+
+    (c?'<button class="row" data-act="open" data-v="cond" data-id="'+c.id+'"><span class="avatar">'+ic("file",20)+'</span><span class="grow"><span class="meta">About</span><span class="name" style="display:block">'+esc(c.name)+'</span></span></button>':'')+
+    (m?'<button class="row" data-act="open" data-v="med" data-id="'+m.id+'"><span class="avatar">'+ic("pill",20)+'</span><span class="grow"><span class="meta">Medicine</span><span class="name" style="display:block">'+esc(m.name)+'</span></span></button>':'')+
+    billLinks(e)+((!d&&!p&&!c&&!m&&!billsFor(e).length)?'<div class="empty">Not linked to anything.</div>':'')+'</div>';
+  out+='<div class="pad" style="margin-top:20px;display:flex;flex-direction:column;gap:10px">'+
+    (e.kind==="appointment"&&e.ts<Date.now()?'<button class="btn primary block" data-act="attended" data-id="'+e.id+'">Mark as attended</button>':'')+
+    (e.notRecorded?'<button class="btn primary block" data-act="recorded" data-id="'+e.id+'">Mark as recorded</button>':'')+
+    (e.kind==="visit"?'<button class="btn block" data-act="add-bill" data-event="'+e.id+'">Add a bill for this visit</button>':'')+
+    '<button class="btn danger block" data-act="del-event" data-id="'+e.id+'">'+(S.confirm===e.id?"Tap again to delete":"Delete entry")+'</button></div>';
+  return out;
+}
+
+/* ---------- BILLS & INSURANCE ---------- */
+function bill(id){return by(D.bills,id);}
+function billsFor(e){return D.bills.filter(function(b){return b.eventId===e.id;});}
+function billOverdue(b){return b.paid===false&&b.dueTs&&sod(b.dueTs)<sod(Date.now());}
+function needBills(){return D.bills.filter(function(b){return b.paid===false||b.insStatus==="submitted";});}
+function billTotals(){
+  var t={owe:0,unpaid:0,back:0,wait:0};
+  D.bills.forEach(function(b){if(b.paid===false){t.owe+=b.amount;t.unpaid++;}if(b.insStatus==="submitted"){t.back+=(b.insCovered||0);t.wait++;}});
+  return t;
+}
+function provName(pid,did){var p=pl(pid),d=doc(did);return p?p.name:(d?d.name:"");}
+function paidChip(b){return b.paid===null?'<span class="chip plain">Paid? Not recorded</span>':(b.paid?'<span class="chip">Paid</span>':(billOverdue(b)?'<span class="chip warn">Overdue</span>':'<span class="chip plain">Unpaid</span>'));}
+function insChip(b){var s=b.insStatus||"none";return '<span class="chip '+(s==="rejected"?"warn":s==="none"?"plain":"")+'">Insurance: '+INS[s].toLowerCase()+'</span>';}
+function billRow(b){
+  return '<button class="row" data-act="open" data-v="bill" data-id="'+b.id+'" style="align-items:flex-start"><span class="grow"><span class="name" style="display:block">'+esc(b.provider||"Bill")+'</span><span class="meta">'+dFull(b.ts)+(b.dueTs&&b.paid===false?' · due '+dFull(b.dueTs):'')+'</span><span style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">'+paidChip(b)+insChip(b)+'</span></span><span style="font-weight:700;font-variant-numeric:tabular-nums">'+eur(b.amount)+'</span></button>';
+}
+function billLinks(e){
+  return billsFor(e).map(function(b){return '<button class="row" data-act="open" data-v="bill" data-id="'+b.id+'"><span class="avatar">'+ic("bill",20)+'</span><span class="grow"><span class="meta">Bill</span><span class="name" style="display:block">'+esc(b.provider)+' · '+eur(b.amount)+'</span></span></button>';}).join("");
+}
+function vBills(){
+  var t=billTotals(),f=S.bfilter||"action";
+  var out=top("Bills",'<button class="iconbtn solid" data-act="add-bill" aria-label="Add bill">'+ic("plus",24)+'</button>');
+  out+='<div class="tiles"><div class="tile"><div class="lbl">You owe</div><div class="tnum">'+eur(t.owe)+'</div><div class="sub">'+t.unpaid+' unpaid bill'+(t.unpaid===1?"":"s")+'</div></div><div class="tile"><div class="lbl">Insurance owes you</div><div class="tnum">'+eur(t.back)+'</div><div class="sub">'+t.wait+' claim'+(t.wait===1?"":"s")+' waiting</div></div></div>';
+  out+='<div class="pad chips" style="margin-top:14px">'+[["action","Needs action"],["check","To check"],["paid","Paid"],["all","All"]].map(function(x){return '<button class="fchip '+(f===x[0]?"on":"")+'" data-act="bfilter" data-v="'+x[0]+'">'+x[1]+'</button>';}).join("")+'</div><div style="height:12px"></div>';
+  var list=D.bills.filter(function(b){return f==="all"||(f==="paid"?b.paid===true:(f==="check"?b.paid===null:(b.paid===false||b.insStatus==="submitted")));});
+  list.sort(function(a,b){
+    if(f==="paid"||f==="all"||f==="check")return b.ts-a.ts;
+    var ao=billOverdue(a)?0:1,bo=billOverdue(b)?0:1;
+    return ao-bo||(a.dueTs||0)-(b.dueTs||0);
+  });
+  out+=listCard(list.map(billRow).join("")||'<div class="empty">Nothing here. Tap + to add a bill.</div>');
+  out+='<div class="pad" style="margin-top:16px"><button class="btn block" data-act="menu-go" data-v="insurance">'+ic("shield",20)+' Insurance details</button></div>';
+  return out;
+}
+function vBill(id){
+  var b=bill(id); if(!b)return top("Bill")+'<div class="empty">Not found.</div>';
+  var e=evt(b.eventId),d=doc(b.doctorId),p=pl(b.placeId),url=safeUrl(b.invoiceUrl),ins=D.insurance||{},iu=safeUrl(ins.url);
+  var covered=b.insCovered||0;
+  var out=top("Bill",'<button class="textbtn" data-act="edit-bill" data-id="'+b.id+'">Edit</button>');
+  out+='<div class="card pad16"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px"><div><div class="sub">From</div><h1 style="font-size:20px">'+esc(b.provider||"Unknown provider")+'</h1></div><div class="tnum" style="margin:0">'+eur(b.amount)+'</div></div>'+
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">'+paidChip(b)+insChip(b)+'</div>'+
+    '<div style="margin-top:12px"><div class="kv"><span>Bill date</span><b>'+dFull(b.ts)+'</b></div>'+
+    (b.dueTs?'<div class="kv"><span>Due</span><b>'+dFull(b.dueTs)+(b.paid===false?' ('+rel(b.dueTs)+')':'')+'</b></div>':'')+
+    (b.paid?'<div class="kv"><span>Paid on</span><b>'+(b.paidTs?dStamp(b.paidTs):"Date not recorded")+'</b></div>'+(b.payRef?'<div class="kv"><span>Payment reference</span><b>'+esc(b.payRef)+'</b></div>':''):'')+'</div>'+
+    (url?'<a class="btn block" style="margin-top:12px;justify-content:space-between" href="'+esc(url)+'" target="_blank" rel="noopener"><span>Open invoice</span>'+ic("ext",18)+'</a>':'<p class="sub" style="margin-top:12px">No invoice link yet. Tap Edit to paste one.</p>')+
+    (b.paid===null?'<p class="sub" style="margin-top:12px">Your spreadsheet has no paid status for this bill.</p>':'')+'<div class="btnrow">'+(b.paid?'<button class="btn flex1" data-act="unpay-bill" data-id="'+b.id+'">Mark as unpaid</button>':'<button class="btn primary flex1" data-act="pay-bill" data-id="'+b.id+'">Mark as paid</button>')+'</div></div>';
+  out+='<div class="sec"><span>Insurance claim</span></div><div class="card pad16"><div class="kv" style="padding-top:0"><span>Status</span><b>'+INS[b.insStatus||"none"]+'</b></div>'+
+    '<div class="kv"><span>'+(b.insStatus==="paid"?"Insurance paid out":"Insurance covers")+'</span><b>'+eur(covered)+'</b></div>'+
+    (covered>0&&(b.insStatus==="submitted"||b.insStatus==="paid")?'<div class="kv"><span>Your share</span><b>'+eur(Math.max(0,b.amount-covered))+'</b></div>':'')+
+    (b.insStatus==="submitted"?'<p class="sub" style="margin-top:8px">Waiting on your insurer'+(covered>0?' to pay '+eur(covered)+'.':'.')+'</p>':'')+
+    (b.insStatus==="none"?'<p class="sub" style="margin-top:8px">Not claimed yet.</p>':'')+
+    '<button class="btn block" style="margin-top:12px" data-act="claim-bill" data-id="'+b.id+'">Update claim</button>'+
+    (iu?'<a class="btn block" style="margin-top:10px;justify-content:space-between" href="'+esc(iu)+'" target="_blank" rel="noopener"><span>Open insurer website</span>'+ic("ext",18)+'</a>':'')+'</div>';
+  if(e||d||p){
+    out+='<div class="sec"><span>This bill is for</span></div><div class="card" style="overflow:hidden">'+(e?evRow(e):'')+
+      (d?'<button class="row" data-act="open" data-v="doctor" data-id="'+d.id+'"><span class="avatar">'+esc(initials(d.name))+'</span><span class="grow"><span class="meta">Doctor</span><span class="name" style="display:block">'+esc(d.name)+'</span></span></button>':'')+
+      (p?'<button class="row" data-act="open" data-v="place" data-id="'+p.id+'"><span class="avatar">'+ic("pin",20)+'</span><span class="grow"><span class="meta">Where</span><span class="name" style="display:block">'+esc(p.name)+'</span></span></button>':'')+'</div>';
+  }
+  if(b.notes)out+='<div class="card pad16 note" style="margin-top:12px">'+esc(b.notes)+'</div>';
+  out+='<div class="pad" style="margin-top:20px"><button class="btn danger block" data-act="del-bill" data-id="'+b.id+'">'+(S.confirm===b.id?"Tap again to delete":"Delete bill")+'</button></div>';
+  return out;
+}
+function vInsurance(){
+  var i=D.insurance||{},url=safeUrl(i.url);
+  var out=top("Insurance",'<button class="textbtn" data-act="edit-insurance">Edit</button>');
+  out+='<div class="card pad16"><div class="lbl">Insurer</div><h1 style="font-size:22px;margin-top:2px">'+esc(i.insurer||"Not added yet")+'</h1>'+
+    '<div style="margin-top:12px"><div class="kv"><span>Policy number</span><span style="display:flex;align-items:center;gap:8px"><b>'+esc(i.policyNumber||"Not added")+'</b>'+(i.policyNumber?'<button class="link" data-act="copy" data-text="'+esc(i.policyNumber)+'">Copy</button>':'')+'</span></div>'+
+    '<div class="kv"><span>Phone</span><span>'+(i.phone?'<a class="link" href="tel:'+esc(String(i.phone).replace(/\s+/g,""))+'">'+esc(i.phone)+'</a>':'<b>Not added</b>')+'</span></div></div>'+
+    (url?'<a class="btn primary block" style="margin-top:14px;justify-content:space-between" href="'+esc(url)+'" target="_blank" rel="noopener"><span>Open insurer website</span>'+ic("ext",18)+'</a><div class="urltext">'+esc(url)+'</div>':'<button class="btn block" style="margin-top:14px" data-act="edit-insurance">Paste your insurer link</button>')+
+    (i.notes?'<p class="note" style="margin-top:12px">'+esc(i.notes)+'</p>':'')+'</div>';
+  var cl=D.bills.filter(function(b){return b.insStatus==="submitted"||b.insStatus==="rejected";});
+  out+='<div class="sec"><span>Claims to follow up</span></div>'+listCard(cl.map(billRow).join("")||'<div class="empty">No open claims.</div>');
+  out+='<div class="pad" style="margin-top:16px"><button class="btn block" data-act="menu-go" data-v="bills">'+ic("bill",20)+' All bills</button></div>';
+  return out;
+}
+function billFields(){
+  var visits=pastEvents(function(e){return e.kind==="visit";}).slice(0,30).map(function(e){return {v:e.id,l:dFull(e.ts)+" · "+e.title};});
+  return [
+   {key:"eventId",label:"Which visit is it for?",type:"select",options:opts(visits,"Not linked to a visit"),hint:"Fills in the doctor, place and date for you."},
+   {key:"doctorId",label:"Doctor",type:"select",options:docOpts()},
+   {key:"placeId",label:"Hospital or place",type:"select",options:placeOpts()},
+   {key:"provider",label:"Bill is from",type:"text",ph:"e.g. St. Brendan's Hospital"},
+   {key:"amount",label:"Amount (EUR)",type:"money"},
+   {key:"ts",label:"Bill date",type:"date"},
+   {key:"dueTs",label:"Due date",type:"date"},
+   {key:"invoiceUrl",label:"Invoice link (Google Doc or Drive)",type:"url",ph:"Paste the link"},
+   {key:"paid",label:"Paid?",type:"select",options:[{v:"false",l:"Not paid yet"},{v:"true",l:"Paid"},{v:"null",l:"Not recorded"}]},
+   {key:"payRef",label:"Payment reference",type:"text",ph:"Optional"},
+   {key:"insStatus",label:"Insurance claim",type:"select",options:Object.keys(INS).map(function(k){return {v:k,l:INS[k]};})},
+   {key:"insCovered",label:"Insurance covers (EUR)",type:"money",hint:"The amount insurance pays, or you expect them to pay."},
+   {key:"notes",label:"Notes",type:"textarea"}
+  ];
+}
+function billChange(key,v){
+  if(key==="eventId"){var e=evt(v.eventId);if(e){v.doctorId=e.doctorId||"";v.placeId=e.placeId||"";v.ts=e.ts;v.provider=provName(v.placeId,v.doctorId)||v.provider;}}
+  if(key==="doctorId"){var d=doc(v.doctorId);if(d&&d.placeId)v.placeId=d.placeId;v.provider=provName(v.placeId,v.doctorId)||v.provider;}
+  if(key==="placeId"){v.provider=provName(v.placeId,v.doctorId)||v.provider;}
+  return v;
+}
+function copyText(t){
+  try{navigator.clipboard.writeText(t).then(function(){toast("Copied "+t);},function(){toast("Could not copy. The number is "+t);});}
+  catch(x){toast("Could not copy. The number is "+t);}
+}
+function appbar(){
+  var n=needBills().length;
+  return '<header class="appbar"><span class="brand">My Medical</span><button class="iconbtn line" data-act="menu-open" aria-label="Open menu'+(n?', '+n+' bills need action':'')+'" aria-haspopup="true">'+ic("menu",24)+'</button></header>';
+}
+function renderMenu(){
+  var el=document.getElementById("menu");
+  if(!S.menu){el.innerHTML="";return;}
+  var n=needBills().length;
+  el.innerHTML='<div class="menuscrim" data-act="menu-close"><div class="menuwrap"><nav class="menupanel" aria-label="Menu">'+
+    '<button data-act="menu-go" data-v="bills">'+ic("bill",22)+'<span>Bills</span>'+(n?'<span class="chip warn">'+n+' to do</span>':'')+'</button>'+
+    '<button data-act="menu-go" data-v="insurance">'+ic("shield",22)+'<span>Insurance</span></button>'+
+    '<button data-act="menu-go" data-v="places">'+ic("pin",22)+'<span>Hospitals and places</span></button>'+
+    '<button data-act="menu-go" data-v="backup">'+ic("down",22)+'<span>Backup and restore</span></button></nav></div></div>';
+}
+
+/* ---------- BACKUP & RESTORE ---------- */
+function exportObj(){return {app:"my-medical-record",version:1,exportedAt:new Date().toISOString(),data:D};}
+function exportText(){return JSON.stringify(exportObj(),null,2);}
+function exportName(){var d=new Date();return "my-medical-record-"+d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+".json";}
+function markBackup(){D.lastBackup=Date.now();save();}
+var DL=null;
+try{if(window.claude&&window.claude.use){window.claude.use("downloads").then(function(d){DL=d||null;},function(){DL=null;});}}catch(e){DL=null;}
+function exportFile(){
+  var txt=exportText(),name=exportName();
+  function viaPicker(){
+    if(!window.showSaveFilePicker){showBackupText("Saving a file is not available here. Copy this text into a file or note instead.");return;}
+    window.showSaveFilePicker({suggestedName:name,types:[{description:"JSON file",accept:{"application/json":[".json"]}}]})
+      .then(function(h){return h.createWritable().then(function(w){return w.write(txt).then(function(){return w.close();});}).then(function(){markBackup();toast("Saved "+(h.name||name));render();});})
+      .catch(function(e){if(e&&e.name==="AbortError")return;showBackupText("Saving a file did not work here. Copy this text into a file or note instead.");});
+  }
+  if(!DL){viaPicker();return;}
+  DL.save({filename:name,data:txt}).then(function(){markBackup();toast("Backup file ready: "+name);render();},function(e){
+    var c=e&&e.code;
+    if(c==="declined")return;
+    if(c==="rate_limited"){toast("A save prompt is already open. Answer it first.");return;}
+    showBackupText("Saving a file did not work here. Copy this text into a file or note instead.");
+  });
+}
+function showBackupText(intro){
+  openSheet({title:"Backup as text",intro:intro||"Select all the text below, copy it, and keep it somewhere safe.",fields:[{key:"txt",label:"Backup text",type:"textarea"}],values:{txt:exportText()},saveLabel:"Done",noFocus:true,save:function(){markBackup();closeSheet();render();}});
+  setTimeout(function(){var t=document.getElementById("f_txt");if(t){t.style.minHeight="260px";t.select();}},30);
+}
+function copyBackup(){
+  var txt=exportText();
+  try{navigator.clipboard.writeText(txt).then(function(){markBackup();toast("Backup copied. Paste it into a note or file.");render();},function(){showBackupText();});}
+  catch(e){showBackupText();}
+}
+function parseImport(txt){
+  var o=JSON.parse(txt),d=(o&&o.data)?o.data:o;
+  ["places","doctors","conds","meds","events"].forEach(function(k){if(!d||!Array.isArray(d[k]))throw new Error("missing "+k);});
+  d.events.forEach(function(e){if(typeof e.ts!=="number")throw new Error("bad event");});
+  seedExtras(d);
+  return d;
+}
+function handleImport(txt){
+  var d;
+  try{d=parseImport(txt);}catch(e){toast("That is not a My Medical Record backup file.");return;}
+  openSheet({title:"Replace your data?",intro:"This backup has "+d.events.length+" entries, "+d.doctors.length+" doctors, "+d.meds.length+" medicines and "+(d.bills||[]).length+" bills. Importing replaces what is in this browser now. Export first if you want to keep the current data.",fields:[],values:{},saveLabel:"Replace my data",
+    save:function(){D=d;save();closeSheet();S.stack=[];S.tab="home";S.confirm=null;render(true);toast("Backup imported");}});
+}
+function vBackup(){
+  var out=top("Backup and restore");
+  out+='<div class="card pad16"><p>Your data lives in this browser only. Save a copy to keep it safe. Put the file in a folder that Google Drive syncs and it backs up automatically.</p>'+
+    '<div class="kv" style="margin-top:12px"><span>Last backup</span><b>'+(D.lastBackup?dFull(D.lastBackup)+', '+tm(D.lastBackup):'Never')+'</b></div>'+
+    '<div class="kv"><span>Holds</span><b>'+D.events.length+' entries, '+D.doctors.length+' doctors, '+D.meds.length+' medicines, '+(D.bills||[]).length+' bills</b></div></div>';
+  out+='<div class="sec"><span>Save a copy</span></div><div class="pad" style="display:flex;flex-direction:column;gap:10px">'+
+    '<button class="btn primary block" data-act="export-file">'+ic("down",20)+' Export to a file</button>'+
+    '<p class="sub" style="margin:0">Asks you where to keep the file. Save it into a folder that Google Drive syncs to back it up.</p>'+
+    '<button class="btn block" data-act="copy-backup">'+ic("copy",20)+' Copy as text</button>'+
+    '<p class="sub" style="margin:0">Use this if saving a file does not work on your device. Paste the text into a note or a file.</p></div>';
+  out+='<div class="sec"><span>Restore a copy</span></div><div class="pad" style="display:flex;flex-direction:column;gap:10px">'+
+    '<button class="btn block" data-act="pick-import">'+ic("file",20)+' Import from a file (browse)</button>'+
+    '<input type="file" id="importFile" accept=".json,application/json,text/plain" hidden>'+
+    '<button class="btn block" data-act="import-text">Paste backup text</button></div>';
+  return out;
+}
+
+/* ---------- tabs & render ---------- */
+var VIEWS={doctor:vDoctor,place:vPlace,med:vMed,cond:vCond,event:vEvent,places:vPlaces,bills:vBills,bill:vBill,insurance:vInsurance,backup:vBackup};
+function tabbar(){
+  function t(k,l,i){return '<button class="tab '+(S.tab===k&&!S.stack.length?"on":"")+'" data-act="tab" data-v="'+k+'">'+ic(i,24)+'<span>'+l+'</span></button>';}
+  return '<nav class="tabbar" aria-label="Main">'+t("home","Home","home")+t("people","Doctors","people")+'<button class="logbtn" data-act="new" data-kind="visit" aria-label="Log something now">'+ic("plus",26)+'<span>Log</span></button>'+t("meds","Meds","pill")+t("record","Record","file")+'</nav>';
+}
+function render(scroll){
+  var topv=S.stack[S.stack.length-1], html;
+  if(topv)html=VIEWS[topv.v](topv.id);
+  else html={home:vHome,people:vPeople,meds:vMeds,record:vRecord}[S.tab]();
+  $app.innerHTML=(topv?"":appbar())+html+tabbar();
+  renderMenu();
+  if(scroll)window.scrollTo(0,0);
+  renderSheet();
+}
+
+/* ---------- sheets (forms) ---------- */
+function opts(list,none){var o=none?[{v:"",l:none}]:[];list.forEach(function(x){o.push(x);});return o;}
+function docOpts(){return opts(D.doctors.map(function(d){return {v:d.id,l:d.name+" ("+d.type+")"};}),"Nobody / not sure");}
+function placeOpts(){return opts(D.places.map(function(p){return {v:p.id,l:p.name};}),"No place");}
+function condOpts(){return opts(D.conds.map(function(c){return {v:c.id,l:c.name};}),"Not linked");}
+function strOpts(a){return a.map(function(x){return {v:x,l:x};});}
+
+function openSheet(cfg){S.sheet=cfg;renderSheet();var f=document.querySelector("#layer input[type=text],#layer textarea");}
+function closeSheet(){S.sheet=null;renderSheet();}
+function fieldHtml(f,v){
+  var id="f_"+f.key,val=v[f.key],h='<label class="f" for="'+id+'">'+esc(f.label)+(f.hint?'<small>'+esc(f.hint)+'</small>':'')+'</label><div class="fieldbox">';
+  if(f.type==="chips"){
+    h='<div class="lbl" style="margin-top:14px">'+esc(f.label)+'</div><div class="chips" style="margin-top:8px" id="'+id+'">'+f.options.map(function(o){return '<button type="button" class="fchip '+(val===o.v?"on":"")+'" data-act="chip" data-key="'+f.key+'" data-val="'+o.v+'" aria-pressed="'+(val===o.v)+'">'+esc(o.l)+'</button>';}).join("")+'</div>';
+    return h;
+  }
+  if(f.type==="select")h+='<select id="'+id+'">'+f.options.map(function(o){return '<option value="'+esc(o.v)+'"'+(String(val)===String(o.v)?" selected":"")+'>'+esc(o.l)+'</option>';}).join("")+'</select>';
+  else if(f.type==="textarea")h+='<textarea id="'+id+'" placeholder="'+esc(f.ph||"")+'">'+esc(val||"")+'</textarea>';
+  else h+='<input id="'+id+'" type="'+(f.type==="datetime"?"datetime-local":f.type==="date"?"date":f.type==="money"?"number":f.type||"text")+'"'+(f.type==="money"?' step="0.01" min="0" inputmode="decimal"':'')+' value="'+esc(f.type==="datetime"?toLocalInput(val):f.type==="date"?(val?toDateInput(val):""):(val==null?"":val))+'" placeholder="'+esc(f.ph||"")+'">';
+  return h+'</div>';
+}
+function collect(){
+  var c=S.sheet,v={};
+  c.fields.forEach(function(f){
+    var el=document.getElementById("f_"+f.key);
+    if(f.type==="chips"){v[f.key]=c.values[f.key];return;}
+    if(!el){v[f.key]=c.values[f.key];return;}
+    if(f.type==="datetime")v[f.key]=fromLocalInput(el.value);
+    else if(f.type==="date")v[f.key]=fromDateInput(el.value);
+    else if(f.type==="money")v[f.key]=Math.max(0,parseFloat(el.value)||0);
+    else if(f.type==="number")v[f.key]=(parseInt(el.value,10)>0?parseInt(el.value,10):null);
+    else v[f.key]=el.value;
+  });
+  return v;
+}
+function renderSheet(){
+  var c=S.sheet;
+  if(!c){$layer.innerHTML="";return;}
+  var html='<div class="scrim" data-act="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-label="'+esc(c.title)+'"><div class="grab"></div><div style="display:flex;justify-content:space-between;align-items:center"><h2>'+esc(c.title)+'</h2><button class="textbtn" data-act="close-sheet">Cancel</button></div>'+
+    (c.intro?'<p class="sub" style="margin-top:4px">'+esc(c.intro)+'</p>':'')+
+    c.fields.map(function(f){return fieldHtml(f,c.values);}).join("")+
+    '<button class="btn primary block" style="margin-top:20px" data-act="save-sheet">'+esc(c.saveLabel||"Save")+'</button></div></div>';
+  $layer.innerHTML=html;
+  var first=$layer.querySelector("input[type=text],textarea");if(first&&!c.noFocus)first.focus({preventScroll:true});
+}
+
+/* entry (event) */
+function entryFields(isNew){
+  return [
+   {key:"kind",label:"What happened",type:"chips",options:["visit","call","result","test","note","appointment"].map(function(k){return {v:k,l:KINDS[k]};})},
+   {key:"ts",label:"Date and time",type:"datetime",hint:isNew?"Stamped with the time right now. Change it if this happened earlier or is booked for later.":""},
+   {key:"doctorId",label:"With",type:"select",options:docOpts()},
+   {key:"placeId",label:"Where",type:"select",options:placeOpts(),hint:"Fills in from the doctor's usual place."},
+   {key:"condId",label:"About",type:"select",options:condOpts()},
+   {key:"title",label:"Short title",type:"text",ph:"e.g. Blood pressure review"},
+   {key:"notes",label:"Notes",type:"textarea",ph:"What was said, agreed or found"},
+   {key:"letterUrl",label:"Letter link (Google Doc)",type:"url",ph:"Paste the link"}
+  ];
+}
+function entryChange(key,v){
+  if(key==="doctorId"){var d=doc(v.doctorId);if(d&&d.placeId)v.placeId=d.placeId;}
+  if(key==="kind"){
+    if(v.kind==="appointment"&&v.ts<Date.now())v.ts=tomorrow9();
+    if(v.kind!=="appointment"&&v.ts>Date.now())v.ts=Date.now();
+  }
+  return v;
+}
+function newEntry(pre){
+  var k=pre.kind||"visit";
+  var v={kind:k,ts:k==="appointment"?tomorrow9():nowTs(),doctorId:pre.doctorId||"",placeId:"",condId:pre.condId||"",title:"",notes:"",letterUrl:""};
+  if(v.doctorId&&doc(v.doctorId))v.placeId=doc(v.doctorId).placeId||"";
+  openSheet({title:"Log something",intro:"Date and time are filled in for you.",fields:entryFields(true),values:v,onChange:entryChange,saveLabel:"Save entry",
+    save:function(x){
+      if(!x.title.trim()){var d=doc(x.doctorId);x.title=KINDS[x.kind]+(d?" with "+d.name:"");}
+      x.id=uid("e");D.events.push(x);save();closeSheet();
+      if(x.kind!=="appointment"&&x.ts>Date.now()){}
+      toast("Saved "+KINDS[x.kind].toLowerCase()+" at "+tm(x.ts)+", "+dFull(x.ts));
+      S.stack=[];S.tab=(x.kind==="appointment")?"home":"record";if(S.tab==="record")S.seg.record="timeline";render(true);
+    }});
+}
+function editEntry(id){
+  var e=evt(id);
+  openSheet({title:"Edit entry",fields:entryFields(false),values:JSON.parse(JSON.stringify(e)),onChange:entryChange,
+    save:function(x){Object.keys(x).forEach(function(k){e[k]=x[k];});if(!e.title.trim())e.title=KINDS[e.kind];save();closeSheet();toast("Entry updated");render();}});
+}
+
+/* ---------- actions ---------- */
+function go(v,id){S.stack.push({v:v,id:id});S.confirm=null;render(true);}
+function markCollected(id){
+  var m=med(id);m.lastCollected=Date.now();m.active=true;
+  D.events.push({id:uid("e"),kind:"collected",ts:m.lastCollected,doctorId:m.doctorId,placeId:m.placeId,condId:m.condId,medId:m.id,title:"Collected "+m.name,notes:"",letterUrl:""});
+  save();var ml=medLeft(m);toast(ml.unknown?m.name+" collected. Add how many days it lasts to track run-out.":m.name+" collected. Runs out about "+dFull(ml.out));render();
+}
+function doAct(el){
+  var a=el.getAttribute("data-act"),id=el.getAttribute("data-id");
+  switch(a){
+   case "tab":S.tab=el.getAttribute("data-v");S.stack=[];render(true);break;
+   case "back":S.stack.pop();S.confirm=null;render(true);break;
+   case "open":go(el.getAttribute("data-v"),id);break;
+   case "seg":S.seg[el.getAttribute("data-k")]=el.getAttribute("data-v");render();break;
+   case "goto-record":S.tab="record";S.stack=[];S.seg.record=el.getAttribute("data-seg")||"summary";render(true);break;
+   case "dfilter":S.dfilter=el.getAttribute("data-v");render();break;
+   case "tfilter":S.tfilter=el.getAttribute("data-v");render();break;
+   case "new":newEntry({kind:el.getAttribute("data-kind"),doctorId:el.getAttribute("data-doc")||"",condId:el.getAttribute("data-cond")||""});break;
+   case "edit-event":editEntry(id);break;
+   case "del-event":
+     if(S.confirm===id){var i=D.events.findIndex(function(e){return e.id===id;});D.events.splice(i,1);S.confirm=null;S.stack.pop();save();toast("Entry deleted");render(true);}
+     else{S.confirm=id;render();}break;
+   case "recorded":evt(id).notRecorded=false;save();toast("Marked as recorded");render();break;
+   case "to-record":S.tab="record";S.stack=[];S.seg.record="timeline";S.tfilter="torecord";render(true);break;
+   case "export-file":exportFile();break;
+   case "copy-backup":copyBackup();break;
+   case "pick-import":var fi=document.getElementById("importFile");if(fi)fi.click();break;
+   case "import-text":
+     openSheet({title:"Paste backup text",intro:"Paste the text you copied from Backup and restore.",fields:[{key:"txt",label:"Backup text",type:"textarea"}],values:{txt:""},saveLabel:"Check backup",save:function(x){if(!x.txt.trim()){toast("Paste the backup text first");return false;}closeSheet();handleImport(x.txt);}});break;
+   case "to-check":S.bfilter="check";S.stack=[];S.confirm=null;go("bills",null);break;
+   case "attended":var e=evt(id);e.kind="visit";save();toast("Marked as a visit");render();break;
+   case "collected":markCollected(id);break;
+   case "raise-toggle":var d=doc(id),r=d.raise[+el.getAttribute("data-i")];r.done=!r.done;save();render();break;
+   case "raise-add":var inp=document.getElementById("raiseInput");if(inp&&inp.value.trim()){doc(id).raise.push({t:inp.value.trim(),done:false});save();render();}break;
+   case "reset":try{localStorage.removeItem(KEY);}catch(x){}D=seed();S.stack=[];S.tab="home";render(true);toast("Spreadsheet data reloaded");break;
+   case "copy-summary":
+     try{navigator.clipboard.writeText(summaryText()).then(function(){toast("Summary copied");},function(){showCopy();});}catch(x){showCopy();}break;
+   case "add-doctor":
+     openSheet({title:"Add a doctor",fields:[{key:"name",label:"Name",type:"text",ph:"e.g. Dr. Jane Murphy"},{key:"type",label:"Type of doctor",type:"select",options:strOpts(DTYPES)},{key:"placeId",label:"Hospital or place",type:"select",options:placeOpts()},{key:"phone",label:"Phone",type:"tel"},{key:"email",label:"Email",type:"email"}],values:{name:"",type:"GP",placeId:"",phone:"",email:""},
+       save:function(x){if(!x.name.trim()){toast("Add a name first");return false;}x.id=uid("d");x.notes="";x.raise=[];D.doctors.push(x);save();closeSheet();toast("Doctor added");render();}});break;
+   case "edit-doctor":
+     var dd=doc(id);openSheet({title:"Edit doctor",fields:[{key:"name",label:"Name",type:"text"},{key:"type",label:"Type of doctor",type:"select",options:strOpts(DTYPES)},{key:"placeId",label:"Hospital or place",type:"select",options:placeOpts()},{key:"phone",label:"Phone",type:"tel"},{key:"email",label:"Email",type:"email"},{key:"notes",label:"Notes",type:"text"}],values:JSON.parse(JSON.stringify(dd)),
+       save:function(x){Object.keys(x).forEach(function(k){dd[k]=x[k];});save();closeSheet();render();}});break;
+   case "add-place":
+     openSheet({title:"Add a hospital or place",fields:[{key:"name",label:"Name",type:"text",ph:"e.g. St. Brendan's Hospital"},{key:"kind",label:"Kind of place",type:"select",options:strOpts(PKINDS)},{key:"address",label:"Address",type:"text"},{key:"patientNumber",label:"Patient number",type:"text",hint:"The number this place gave you. Shown at the top of its page."},{key:"phone",label:"Phone",type:"tel"}],values:{name:"",kind:"Hospital",address:"",patientNumber:"",phone:""},
+       save:function(x){if(!x.name.trim()){toast("Add a name first");return false;}x.id=uid("p");D.places.push(x);save();closeSheet();toast("Place added");render();}});break;
+   case "edit-place":
+     var pp=pl(id);openSheet({title:"Edit place",fields:[{key:"name",label:"Name",type:"text"},{key:"kind",label:"Kind of place",type:"select",options:strOpts(PKINDS)},{key:"address",label:"Address",type:"text"},{key:"patientNumber",label:"Patient number",type:"text",hint:"The number this place gave you. Shown at the top of its page."},{key:"phone",label:"Phone",type:"tel"}],values:JSON.parse(JSON.stringify(pp)),
+       save:function(x){Object.keys(x).forEach(function(k){pp[k]=x[k];});save();closeSheet();render();}});break;
+   case "add-med":case "edit-med":
+     var mm=a==="edit-med"?med(id):null;
+     var mv=mm?JSON.parse(JSON.stringify(mm)):{name:"",dose:"",schedule:"",doctorId:"",condId:"",placeId:"p5",lastCollected:Date.now(),supplyDays:30,active:true};
+     var mf=[{key:"name",label:"Medicine",type:"text",ph:"e.g. Ramipril"},{key:"dose",label:"Dose",type:"text",ph:"e.g. 5 mg"},{key:"schedule",label:"When you take it",type:"text",ph:"e.g. Once a day, morning"},
+       {key:"lastCollected",label:"Last collected",type:"date"},{key:"supplyDays",label:"Days the supply lasts",type:"number",hint:"Used to work out when you will run out."},
+       {key:"doctorId",label:"Prescribed by",type:"select",options:docOpts()},{key:"placeId",label:"Collected from",type:"select",options:placeOpts()},{key:"condId",label:"For",type:"select",options:condOpts()},
+       {key:"active",label:"Status",type:"select",options:[{v:"true",l:"Current"},{v:"false",l:"Stopped"}]},{key:"notes",label:"Notes",type:"text"}];
+     mv.active=String(mv.active!==false);
+     openSheet({title:mm?"Edit medicine":"Add a medicine",fields:mf,values:mv,
+       save:function(x){if(!x.name.trim()){toast("Add a name first");return false;}x.active=(x.active==="true");if(mm){Object.keys(x).forEach(function(k){mm[k]=x[k];});}else{x.id=uid("m");D.meds.push(x);}save();closeSheet();toast("Saved");render();}});break;
+   case "add-cond":case "edit-cond":
+     var cc=a==="edit-cond"?cond(id):null;
+     openSheet({title:cc?"Edit health issue":"Add a health issue",fields:[{key:"name",label:"What is it?",type:"text",ph:"e.g. Left knee pain"},{key:"status",label:"Status",type:"select",options:strOpts(STATUS)},{key:"since",label:"Since",type:"date"},{key:"notes",label:"Notes",type:"textarea"}],
+       values:cc?JSON.parse(JSON.stringify(cc)):{name:"",status:"Ongoing",since:Date.now(),notes:""},
+       save:function(x){if(!x.name.trim()){toast("Add a name first");return false;}if(cc){Object.keys(x).forEach(function(k){cc[k]=x[k];});}else{x.id=uid("c");D.conds.push(x);}save();closeSheet();toast("Saved");render();}});break;
+   case "menu-open":S.menu=true;renderMenu();var mb=document.querySelector("#menu button");if(mb)mb.focus();break;
+   case "menu-close":S.menu=false;renderMenu();break;
+   case "menu-go":S.menu=false;renderMenu();S.stack=[];S.confirm=null;go(el.getAttribute("data-v"),null);break;
+   case "copy":copyText(el.getAttribute("data-text"));break;
+   case "bfilter":S.bfilter=el.getAttribute("data-v");render();break;
+   case "add-bill":case "edit-bill":
+     var bb=a==="edit-bill"?bill(id):null,bpre=el.getAttribute("data-event")||"";
+     var bv=bb?JSON.parse(JSON.stringify(bb)):{eventId:bpre,doctorId:"",placeId:"",provider:"",ts:Date.now(),dueTs:Date.now()+30*DAY,amount:0,invoiceUrl:"",paid:false,paidTs:null,payRef:"",insStatus:"none",insCovered:0,notes:""};
+     if(!bb&&bpre)bv=billChange("eventId",bv);
+     bv.paid=String(bv.paid);
+     openSheet({title:bb?"Edit bill":"Add a bill",fields:billFields(),values:bv,onChange:billChange,
+       save:function(x){
+         if(!x.ts)x.ts=Date.now();
+         x.paid=(x.paid==="true"?true:(x.paid==="null"?null:false));
+         if(bb){var was=bb.paid;Object.keys(x).forEach(function(k){bb[k]=x[k];});if(bb.paid&&!was&&!bb.paidTs)bb.paidTs=Date.now();if(!bb.paid)bb.paidTs=null;}
+         else{x.id=uid("b");x.paidTs=x.paid?Date.now():null;D.bills.push(x);}
+         save();closeSheet();toast("Bill saved");
+         if(!bb){S.stack=[];S.tab=S.tab||"home";go("bill",x.id);}else render();
+       }});break;
+   case "pay-bill":
+     var pb=bill(id);
+     openSheet({title:"Mark as paid",intro:pb.provider+" · "+eur(pb.amount),fields:[{key:"paidTs",label:"Paid on",type:"datetime",hint:"Stamped with the time right now. Change it if you paid earlier."},{key:"payRef",label:"Payment reference",type:"text",ph:"Receipt or transaction number"}],values:{paidTs:Date.now(),payRef:pb.payRef||""},saveLabel:"Mark as paid",
+       save:function(x){pb.paid=true;pb.paidTs=x.paidTs;pb.payRef=x.payRef;save();closeSheet();toast("Marked as paid on "+dFull(x.paidTs));render();}});break;
+   case "unpay-bill":var ub=bill(id);ub.paid=false;ub.paidTs=null;save();toast("Marked as unpaid");render();break;
+   case "claim-bill":
+     var cb=bill(id);
+     openSheet({title:"Insurance claim",intro:cb.provider+" · "+eur(cb.amount),fields:[{key:"insStatus",label:"Claim status",type:"select",options:Object.keys(INS).map(function(k){return {v:k,l:INS[k]};})},{key:"insCovered",label:"Insurance covers (EUR)",type:"money",hint:"The amount insurance pays, or you expect them to pay."}],values:{insStatus:cb.insStatus||"none",insCovered:cb.insCovered||0},
+       save:function(x){cb.insStatus=x.insStatus;cb.insCovered=x.insCovered;save();closeSheet();toast("Claim updated");render();}});break;
+   case "del-bill":
+     if(S.confirm===id){var bi=D.bills.findIndex(function(b){return b.id===id;});D.bills.splice(bi,1);S.confirm=null;S.stack.pop();save();toast("Bill deleted");render(true);}
+     else{S.confirm=id;render();}break;
+   case "edit-insurance":
+     var ii=D.insurance;
+     openSheet({title:"Insurance",fields:[{key:"insurer",label:"Insurer",type:"text",ph:"e.g. Your health insurer"},{key:"policyNumber",label:"Policy number",type:"text"},{key:"phone",label:"Phone",type:"tel"},{key:"url",label:"Insurer link",type:"url",ph:"Paste the link here",hint:"Becomes a button that opens their website."},{key:"notes",label:"Notes",type:"textarea"}],values:JSON.parse(JSON.stringify(ii)),
+       save:function(x){Object.keys(x).forEach(function(k){ii[k]=x[k];});save();closeSheet();toast("Insurance saved");render();}});break;
+   case "edit-allergies":
+     openSheet({title:"Allergies",fields:[{key:"allergies",label:"Allergies",type:"text",ph:"e.g. Penicillin"}],values:{allergies:D.allergies},save:function(x){D.allergies=x.allergies;save();closeSheet();render();}});break;
+  }
+}
+function showCopy(){
+  openSheet({title:"Copy summary",intro:"Select all the text below and copy it.",fields:[{key:"txt",label:"Summary",type:"textarea"}],values:{txt:summaryText()},saveLabel:"Done",noFocus:true,save:function(){closeSheet();}});
+  setTimeout(function(){var t=document.getElementById("f_txt");if(t){t.style.minHeight="260px";t.select();}},30);
+}
+
+document.addEventListener("click",function(ev){
+  var el=ev.target.closest("[data-act]");
+  if(!el)return;
+  var a=el.getAttribute("data-act");
+  if(a==="scrim"){if(ev.target===el)closeSheet();return;}
+  if(a==="close-sheet"){closeSheet();return;}
+  if(a==="chip"){
+    var c=S.sheet,v=collect();v[el.getAttribute("data-key")]=el.getAttribute("data-val");
+    c.values=c.onChange?c.onChange(el.getAttribute("data-key"),v):v;renderSheet();return;
+  }
+  if(a==="save-sheet"){
+    var c2=S.sheet,x=collect();
+    if(c2.save(x)===false)return;
+    return;
+  }
+  if(a==="menu-close"&&ev.target!==el)return;
+  doAct(el);
+});
+document.addEventListener("change",function(ev){
+  var t=ev.target;
+  if(t.id==="importFile"&&t.files&&t.files[0]){
+    var r=new FileReader();
+    r.onload=function(){handleImport(String(r.result||""));};
+    r.onerror=function(){toast("Could not read that file.");};
+    r.readAsText(t.files[0]);
+    try{t.value="";}catch(e){}
+    return;
+  }
+  if(S.sheet&&S.sheet.onChange&&t.id&&t.id.indexOf("f_")===0&&t.tagName==="SELECT"){
+    var key=t.id.slice(2),v=collect();S.sheet.values=S.sheet.onChange(key,v);renderSheet();
+  }
+});
+document.addEventListener("keydown",function(ev){
+  if(ev.key==="Escape"){if(S.sheet)closeSheet();else if(S.menu){S.menu=false;renderMenu();}}
+  if(ev.key==="Enter"&&ev.target.id==="raiseInput"){ev.preventDefault();doAct(document.querySelector('[data-act="raise-add"]'));}
+});
+render();
+})();
+</script>
+</body>
+</html>

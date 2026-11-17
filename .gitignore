@@ -1,0 +1,4 @@
+# Personal health data must never be committed. Keep backup files outside the repo.
+my-medical-data*.json
+my-medical-record-*.json
+*.private.json
