@@ -106,8 +106,8 @@ label.f small{display:block;font-weight:400;color:var(--muted);font-size:13px}
 .menuscrim{position:fixed;inset:0;background:rgba(27,42,47,.35);z-index:10;display:flex;justify-content:center;align-items:flex-start}
 .menuwrap{width:min(440px,100%);display:flex;justify-content:flex-end;padding:64px 12px 0;pointer-events:none}
 .menupanel{pointer-events:auto;width:290px;background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 12px 30px rgba(27,42,47,.25)}
-.menupanel button{width:100%;min-height:58px;display:flex;align-items:center;gap:12px;padding:0 16px;border:0;border-bottom:1px solid var(--line);background:none;text-align:left;font-weight:700}
-.menupanel button:last-child{border-bottom:0}
+.menupanel button,.menupanel a{box-sizing:border-box;color:var(--ink);text-decoration:none;font-size:16px;cursor:pointer;width:100%;min-height:58px;display:flex;align-items:center;gap:12px;padding:0 16px;border:0;border-bottom:1px solid var(--line);background:none;text-align:left;font-weight:700}
+.menupanel>:last-child{border-bottom:0}
 .menupanel .chip{margin-left:auto}
 .tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 16px 0}
 .tile{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px}
@@ -120,6 +120,7 @@ label.f small{display:block;font-weight:400;color:var(--muted);font-size:13px}
 .kv b{text-align:right}
 .urltext{font-size:13px;color:var(--muted);word-break:break-all;margin-top:6px}
 @media (prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.6}to{transform:none;opacity:1}}}
+.ver{font-size:12px;font-weight:600;opacity:.65;margin-left:6px;letter-spacing:.02em}
 </style>
 </head>
 <body>
@@ -142,6 +143,7 @@ var STATUS=["Ongoing","Monitoring","Resolved"];
 var INS={none:"Not claimed",submitted:"Submitted",paid:"Paid out",rejected:"Rejected"};
 
 var ICON={
+ folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
  down:'<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>',
  menu:'<path d="M4 7h16M4 12h16M4 17h16"/>',
  bill:'<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
@@ -204,6 +206,8 @@ function seed(){
 function seedExtras(D){
   if(!D.insurance)D.insurance={insurer:"",policyNumber:"",phone:"",url:"",notes:""};
   if(!D.bills)D.bills=[];
+  if(!D.chases)D.chases=[];
+  if(D.healthFolder===undefined)D.healthFolder="";
   if(D.allergies===undefined)D.allergies="";
   D.places.forEach(function(p){if(p.patientNumber===undefined)p.patientNumber="";});
 }
@@ -224,7 +228,7 @@ function medLeft(m){if(!m.lastCollected||!m.supplyDays)return {out:null,days:999
 function who(e){var d=doc(e.doctorId),p=pl(e.placeId),a=[];if(d)a.push(d.name);if(p)a.push(p.name);return a.join(" · ");}
 
 /* ---------- state ---------- */
-var S={tab:"home",stack:[],sheet:null,seg:{people:"doctors",record:"summary"},dfilter:"All",tfilter:"all",confirm:null,bfilter:"action",menu:false};
+var S={tab:"home",stack:[],sheet:null,seg:{people:"doctors",record:"summary"},dfilter:"All",tfilter:"all",confirm:null,bfilter:"action",cfilter:"open",menu:false};
 var $app=document.getElementById("app"),$layer=document.getElementById("layer"),$toast=document.getElementById("toast");
 var toastTimer;
 function toast(t){$toast.innerHTML='<div class="toast" role="status">'+esc(t)+'</div>';clearTimeout(toastTimer);toastTimer=setTimeout(function(){$toast.innerHTML="";},2600);}
@@ -237,7 +241,7 @@ function evRow(e){
   var d=new Date(e.ts);
   return '<button class="row" data-act="open" data-v="event" data-id="'+e.id+'">'+
     '<span class="date"><b>'+d.getDate()+'</b><span>'+MON[d.getMonth()]+'</span></span>'+
-    '<span class="grow"><span class="kind">'+KINDS[e.kind]+(tm(e.ts)?' · '+tm(e.ts):'')+'</span><span class="name" style="display:block">'+esc(e.title)+'</span><span class="meta">'+esc(who(e))+'</span>'+(e.notRecorded?'<span class="chip warn" style="margin-top:4px">Not recorded yet</span>':'')+'</span>'+
+    '<span class="grow"><span class="kind">'+KINDS[e.kind]+(tm(e.ts)?' · '+tm(e.ts):'')+'</span>'+(e.virtual?' <span class="chip" style="margin-left:6px;padding:2px 8px">Virtual</span>':'')+'<span class="name" style="display:block">'+esc(e.title)+'</span><span class="meta">'+esc(who(e))+'</span>'+(e.notRecorded?'<span class="chip warn" style="margin-top:4px">Not recorded yet</span>':'')+'</span>'+
     '<span style="color:var(--muted)">'+ic("chev",18)+'</span></button>';
 }
 function listCard(html){return '<div class="card" style="overflow:hidden">'+html+'</div>';}
@@ -250,21 +254,24 @@ function vHome(){
   out+='<div class="pad" style="padding-top:6px"><div class="sub">'+DOW[now.getDay()]+" "+now.getDate()+" "+MONL[now.getMonth()]+'</div><h1 class="big">'+greet+'</h1></div>';
   if(nx){
     var d=doc(nx.doctorId),p=pl(nx.placeId);
-    out+='<div class="hero"><div class="eyebrow">NEXT APPOINTMENT</div><div class="big2">'+dStamp(nx.ts)+'</div><div class="line2">'+esc(d?d.name+(d.type?" · "+d.type:""):"No doctor chosen")+'</div><div class="line2" style="opacity:.85">'+esc(nx.title)+(p?" · "+esc(p.name):"")+'</div>'+
+    out+='<div class="hero"><div class="eyebrow">NEXT APPOINTMENT</div><div class="big2">'+dStamp(nx.ts)+'</div><div class="line2">'+esc(d?d.name+(d.type?" · "+d.type:""):"No doctor chosen")+'</div><div class="line2" style="opacity:.85">'+esc(nx.title)+(p?" · "+esc(p.name):"")+(nx.virtual?' <span class="chip" style="background:#fff;color:#0F4546;margin-left:6px">Virtual</span>':'')+'</div>'+
       '<div class="btnrow">'+(d?'<button class="btn onhero flex1" data-act="open" data-v="doctor" data-id="'+d.id+'">Open visit sheet</button>':'<button class="btn onhero flex1" data-act="open" data-v="event" data-id="'+nx.id+'">Open</button>')+
       (p?'<a class="btn ghosthero" href="'+mapUrl(p)+'" target="_blank" rel="noopener">Directions</a>':'')+'</div></div>';
   }else{
     out+='<div class="hero"><div class="eyebrow">NEXT APPOINTMENT</div><div class="big2">Nothing booked</div><div class="btnrow"><button class="btn onhero flex1" data-act="new" data-kind="appointment">Add an appointment</button></div></div>';
   }
   if(!D.events.length&&!D.doctors.length)out+='<div class="card pad16" style="margin-top:12px"><h2 style="font-size:18px">Nothing here yet</h2><p class="sub" style="margin-top:4px">Load a backup file, or start by logging your first visit.</p><button class="btn primary block" style="margin-top:12px" data-act="menu-go" data-v="backup">Load a backup file</button></div>';
-  out+='<div class="sec"><span>Log something now</span></div><div class="pad chips">'+
-    ["visit","call","result","test","note"].map(function(k){return '<button class="fchip" data-act="new" data-kind="'+k+'">'+KINDS[k]+'</button>';}).join("")+'</div>';
+  out+='<div class="sec"><span>Upcoming</span><button class="textbtn" data-act="goto-record" data-seg="timeline">See all</button></div>';
+  out+=listCard(upcoming().slice(0,4).map(evRow).join("")||'<div class="empty">No appointments booked yet.</div>');
   var att=attention();
   if(att){out+='<div class="sec"><span>Needs attention</span></div>'+att;}
+  var oc=openChases();
+  if(oc.length)out+='<div class="sec"><span>Chase-ups</span><button class="textbtn" data-act="menu-go" data-v="chases">See all</button></div>'+listCard(oc.slice(0,3).map(chaseRow).join(""));
+  out+='<div class="sec"><span>Log something now</span></div><div class="pad chips">'+
+    ["visit","call","result","test","note"].map(function(k){return '<button class="fchip" data-act="new" data-kind="'+k+'">'+KINDS[k]+'</button>';}).join("")+'</div>';
   var bt=billTotals();
   out+='<div class="sec"><span>Bills</span><button class="textbtn" data-act="menu-go" data-v="bills">Open</button></div><div class="tiles" style="margin-top:0"><button class="tile" data-act="menu-go" data-v="bills" style="text-align:left"><div class="lbl">You owe</div><div class="tnum">'+eur(bt.owe)+'</div><div class="sub">'+bt.unpaid+' unpaid</div></button><button class="tile" data-act="menu-go" data-v="insurance" style="text-align:left"><div class="lbl">Insurance owes you</div><div class="tnum">'+eur(bt.back)+'</div><div class="sub">'+bt.wait+' claim'+(bt.wait===1?'':'s')+' waiting</div></button></div>';
-  out+='<div class="sec"><span>Recent activity</span><button class="textbtn" data-act="goto-record" data-seg="timeline">See all</button></div>';
-  out+=listCard(pastEvents().slice(0,4).map(evRow).join("")||'<div class="empty">Nothing logged yet.</div>');
+  out+='<div class="sec"><span>Health folder</span></div><div class="pad">'+folderButton()+'</div>';
   out+='<p class="proto">Your data stays in this browser only. Use <button class="link" data-act="menu-go" data-v="backup">Backup and restore</button> to save a copy or load one.</p>';
   return out;
 }
@@ -477,16 +484,16 @@ function vCond(id){
 /* ---------- EVENT ---------- */
 function vEvent(id){
   var e=evt(id); if(!e)return top("Entry")+'<div class="empty">Not found.</div>';
-  var d=doc(e.doctorId),p=pl(e.placeId),c=cond(e.condId),m=med(e.medId);
+  var d=doc(e.doctorId),p=pl(e.placeId),c=cond(e.condId),m=med(e.medId),ch=chase(e.chaseId);
   var out=top(KINDS[e.kind],'<button class="textbtn" data-act="edit-event" data-id="'+e.id+'">Edit</button>');
-  out+='<div class="card pad16"><div class="kind">'+KINDS[e.kind]+'</div><h1 style="font-size:22px;margin-top:2px">'+esc(e.title)+'</h1><p class="sub" style="margin-top:4px">'+dLong(e.ts)+'<br>'+(e.ts>Date.now()?rel(e.ts):rel(e.ts))+'</p>'+(e.notes?'<p class="note" style="margin-top:12px">'+esc(e.notes)+'</p>':'<p class="sub" style="margin-top:12px">No notes.</p>')+(e.docName&&!e.letterUrl?'<p class="sub" style="margin-top:12px">Document: '+esc(e.docName)+'</p>':'')+(e.notRecorded?'<p style="margin-top:12px"><span class="chip warn">Not recorded yet</span></p>':'')+
+  out+='<div class="card pad16"><div class="kind">'+KINDS[e.kind]+(e.virtual?' · Virtual':'')+'</div><h1 style="font-size:22px;margin-top:2px">'+esc(e.title)+'</h1><p class="sub" style="margin-top:4px">'+dLong(e.ts)+'<br>'+(e.ts>Date.now()?rel(e.ts):rel(e.ts))+'</p>'+(e.notes?'<p class="note" style="margin-top:12px">'+esc(e.notes)+'</p>':'<p class="sub" style="margin-top:12px">No notes.</p>')+(e.docName&&!e.letterUrl?'<p class="sub" style="margin-top:12px">Document: '+esc(e.docName)+'</p>':'')+(e.notRecorded?'<p style="margin-top:12px"><span class="chip warn">Not recorded yet</span></p>':'')+
     (e.letterUrl?'<a class="btn block" style="margin-top:14px;justify-content:space-between" href="'+esc(safeUrl(e.letterUrl))+'" target="_blank" rel="noopener"><span>Open document (Google Drive)</span>'+ic("ext",18)+'</a>':'')+'</div>';
   out+='<div class="sec"><span>Connected to</span></div><div class="card" style="overflow:hidden">'+
     (d?'<button class="row" data-act="open" data-v="doctor" data-id="'+d.id+'"><span class="avatar">'+esc(initials(d.name))+'</span><span class="grow"><span class="meta">With</span><span class="name" style="display:block">'+esc(d.name)+' · '+esc(d.type)+'</span></span></button>':'')+
     (p?'<button class="row" data-act="open" data-v="place" data-id="'+p.id+'"><span class="avatar">'+ic("pin",20)+'</span><span class="grow"><span class="meta">Where</span><span class="name" style="display:block">'+esc(p.name)+'</span></span></button>':'')+
     (c?'<button class="row" data-act="open" data-v="cond" data-id="'+c.id+'"><span class="avatar">'+ic("file",20)+'</span><span class="grow"><span class="meta">About</span><span class="name" style="display:block">'+esc(c.name)+'</span></span></button>':'')+
     (m?'<button class="row" data-act="open" data-v="med" data-id="'+m.id+'"><span class="avatar">'+ic("pill",20)+'</span><span class="grow"><span class="meta">Medicine</span><span class="name" style="display:block">'+esc(m.name)+'</span></span></button>':'')+
-    billLinks(e)+((!d&&!p&&!c&&!m&&!billsFor(e).length)?'<div class="empty">Not linked to anything.</div>':'')+'</div>';
+    (ch?'<button class="row" data-act="open" data-v="chase" data-id="'+ch.id+'"><span class="avatar">'+ic("phone",20)+'</span><span class="grow"><span class="meta">Chase-up</span><span class="name" style="display:block">'+esc(ch.title)+'</span></span></button>':'')+billLinks(e)+((!d&&!p&&!c&&!m&&!ch&&!billsFor(e).length)?'<div class="empty">Not linked to anything.</div>':'')+'</div>';
   out+='<div class="pad" style="margin-top:20px;display:flex;flex-direction:column;gap:10px">'+
     (e.kind==="appointment"&&e.ts<Date.now()?'<button class="btn primary block" data-act="attended" data-id="'+e.id+'">Mark as attended</button>':'')+
     (e.notRecorded?'<button class="btn primary block" data-act="recorded" data-id="'+e.id+'">Mark as recorded</button>':'')+
@@ -599,18 +606,79 @@ function copyText(t){
   catch(x){toast("Could not copy. The number is "+t);}
 }
 function appbar(){
-  var n=needBills().length;
-  return '<header class="appbar"><span class="brand">My Medical</span><button class="iconbtn line" data-act="menu-open" aria-label="Open menu'+(n?', '+n+' bills need action':'')+'" aria-haspopup="true">'+ic("menu",24)+'</button></header>';
+  var n=needBills().length+openChases().length;
+  return '<header class="appbar"><span class="brand">My Medical <span class="ver" aria-label="Version">V0.01</span></span><button class="iconbtn line" data-act="menu-open" aria-label="Open menu'+(n?', '+n+' to follow up':'')+'" aria-haspopup="true">'+ic("menu",24)+'</button></header>';
 }
 function renderMenu(){
   var el=document.getElementById("menu");
   if(!S.menu){el.innerHTML="";return;}
-  var n=needBills().length;
+  var nb=needBills().length,oc2=openChases().length;
   el.innerHTML='<div class="menuscrim" data-act="menu-close"><div class="menuwrap"><nav class="menupanel" aria-label="Menu">'+
-    '<button data-act="menu-go" data-v="bills">'+ic("bill",22)+'<span>Bills</span>'+(n?'<span class="chip warn">'+n+' to do</span>':'')+'</button>'+
+    '<button data-act="menu-go" data-v="bills">'+ic("bill",22)+'<span>Bills</span>'+(nb?'<span class="chip warn">'+nb+' to do</span>':'')+'</button>'+
+    '<button data-act="menu-go" data-v="chases">'+ic("phone",22)+'<span>Chase-ups</span>'+(oc2?'<span class="chip warn">'+oc2+' open</span>':'')+'</button>'+
     '<button data-act="menu-go" data-v="insurance">'+ic("shield",22)+'<span>Insurance</span></button>'+
     '<button data-act="menu-go" data-v="places">'+ic("pin",22)+'<span>Hospitals and places</span></button>'+
+    (folderUrl()?'<a href="'+esc(folderUrl())+'" target="_blank" rel="noopener" data-act="menu-close">'+ic("folder",22)+'<span>Health folder</span>'+ic("ext",18)+'</a>':'<button data-act="edit-folder">'+ic("folder",22)+'<span>Add health folder link</span></button>')+
     '<button data-act="menu-go" data-v="backup">'+ic("down",22)+'<span>Backup and restore</span></button></nav></div></div>';
+}
+
+/* ---------- CHASE-UPS & HEALTH FOLDER ---------- */
+function chase(id){return by(D.chases||[],id);}
+function openChases(){return (D.chases||[]).filter(function(c){return !c.resolved;}).sort(function(a,b){return b.startedTs-a.startedTs;});}
+function chaseCalls(c){return pastEvents(function(e){return e.chaseId===c.id;});}
+function chaseRow(c){
+  var calls=chaseCalls(c),n=calls.length,last=calls[0],d=doc(c.doctorId),cd=cond(c.condId);
+  var who2=[d?d.name:"",cd?cd.name:""].filter(Boolean).join(" · ")||"Not linked to a doctor or issue";
+  return '<button class="row" data-act="open" data-v="chase" data-id="'+c.id+'" style="align-items:flex-start"><span class="grow"><span class="name" style="display:block">'+esc(c.title)+'</span><span class="meta">'+esc(who2)+'</span><span class="meta" style="display:block">'+(n?n+' call'+(n===1?'':'s')+' · last '+rel(last.ts)+' ('+dFull(last.ts)+')':'No calls logged yet · started '+rel(c.startedTs))+'</span></span><span class="chip '+(c.resolved?'plain':'warn')+'">'+(c.resolved?'Resolved':'Open')+'</span></button>';
+}
+function vChases(){
+  var f=S.cfilter||"open";
+  var out=top("Chase-ups",'<button class="iconbtn solid" data-act="add-chase" aria-label="Add chase-up">'+ic("plus",24)+'</button>');
+  out+='<p class="sub" style="margin:4px 20px 0">Use a chase-up when you are waiting on a scan, a result or a letter. Every call you log against it is counted here.</p>';
+  out+='<div class="pad chips" style="margin-top:14px">'+[["open","Open"],["resolved","Resolved"],["all","All"]].map(function(x){return '<button class="fchip '+(f===x[0]?"on":"")+'" data-act="cfilter" data-v="'+x[0]+'">'+x[1]+'</button>';}).join("")+'</div><div style="height:12px"></div>';
+  var list=(D.chases||[]).filter(function(c){return f==="all"||(f==="open"?!c.resolved:c.resolved);}).sort(function(a,b){return b.startedTs-a.startedTs;});
+  out+=listCard(list.map(chaseRow).join("")||'<div class="empty">'+(f==="resolved"?'Nothing resolved yet.':'No open chase-ups. Tap + to start one.')+'</div>');
+  return out;
+}
+function vChase(id){
+  var c=chase(id); if(!c)return top("Chase-up")+'<div class="empty">Not found.</div>';
+  var calls=chaseCalls(c),n=calls.length,last=calls[0],d=doc(c.doctorId),cd=cond(c.condId);
+  var out=top("Chase-up",'<button class="textbtn" data-act="edit-chase" data-id="'+c.id+'">Edit</button>');
+  out+='<div class="card pad16"><span class="chip '+(c.resolved?'plain':'warn')+'">'+(c.resolved?'Resolved':'Open')+'</span><h1 style="font-size:22px;margin-top:6px">'+esc(c.title)+'</h1>'+
+    '<div style="margin-top:12px"><div class="kv"><span>Started</span><b>'+dFull(c.startedTs)+'</b></div>'+
+    '<div class="kv"><span>Calls made</span><b>'+n+'</b></div>'+
+    '<div class="kv"><span>Last call</span><b>'+(last?dStamp(last.ts)+' ('+rel(last.ts)+')':'None yet')+'</b></div>'+
+    (c.resolved?'<div class="kv"><span>Resolved on</span><b>'+dFull(c.resolvedTs)+'</b></div>':'<div class="kv"><span>Waiting for</span><b>'+Math.max(0,Math.round((sod(Date.now())-sod(c.startedTs))/DAY))+' days</b></div>')+'</div>'+
+    (c.notes?'<p class="note" style="margin-top:12px">'+esc(c.notes)+'</p>':'')+
+    (c.resolved&&c.outcome?'<p class="note" style="margin-top:12px"><b>Answer:</b> '+esc(c.outcome)+'</p>':'')+
+    '<div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">'+
+    (c.resolved?'<button class="btn block" data-act="reopen-chase" data-id="'+c.id+'">Reopen this chase-up</button>':'<button class="btn primary block" data-act="new" data-kind="call" data-chase="'+c.id+'">Log a call</button><button class="btn block" data-act="resolve-chase" data-id="'+c.id+'">Mark as resolved</button>')+'</div></div>';
+  if(d||cd){
+    out+='<div class="sec"><span>Linked to</span></div><div class="card" style="overflow:hidden">'+
+      (d?'<button class="row" data-act="open" data-v="doctor" data-id="'+d.id+'"><span class="avatar">'+esc(initials(d.name))+'</span><span class="grow"><span class="meta">Doctor</span><span class="name" style="display:block">'+esc(d.name)+'</span></span></button>':'')+
+      (cd?'<button class="row" data-act="open" data-v="cond" data-id="'+cd.id+'"><span class="avatar">'+ic("file",20)+'</span><span class="grow"><span class="meta">Health issue</span><span class="name" style="display:block">'+esc(cd.name)+'</span></span></button>':'')+'</div>';
+  }
+  out+='<div class="sec"><span>Calls and updates</span></div>'+listCard(calls.map(evRow).join("")||'<div class="empty">No calls logged yet. Tap Log a call after you ring.</div>');
+  out+='<div class="pad" style="margin-top:20px"><button class="btn danger block" data-act="del-chase" data-id="'+c.id+'">'+(S.confirm===c.id?"Tap again to delete":"Delete chase-up")+'</button></div>';
+  return out;
+}
+function chaseFields(){return [
+  {key:"title",label:"What are you chasing?",type:"text",ph:"e.g. Kidney scan results"},
+  {key:"condId",label:"Health issue",type:"select",options:condOpts()},
+  {key:"doctorId",label:"Doctor",type:"select",options:docOpts()},
+  {key:"notes",label:"Notes",type:"textarea",ph:"Who to ask for, reference numbers, what you were told"}
+];}
+function chaseOpts(){return opts((D.chases||[]).slice().sort(function(a,b){return (a.resolved?1:0)-(b.resolved?1:0)||b.startedTs-a.startedTs;}).map(function(c){return {v:c.id,l:c.title+(c.resolved?" (resolved)":"")};}),"Not part of a chase-up");}
+function folderUrl(){return safeUrl(D.healthFolder);}
+function folderButton(){
+  var u=folderUrl();
+  if(u)return '<a class="btn block" style="justify-content:space-between" href="'+esc(u)+'" target="_blank" rel="noopener"><span>Open health folder (Google Drive)</span>'+ic("ext",18)+'</a><button class="link" style="margin-top:10px" data-act="edit-folder">Change folder link</button>';
+  return '<button class="btn block" data-act="edit-folder">'+ic("folder",20)+' Add your health folder link</button><p class="sub" style="margin:8px 0 0">Paste the link to your Google Drive health folder once. After that one tap opens it.</p>';
+}
+function editFolder(){
+  S.menu=false;renderMenu();
+  openSheet({title:"Health folder",fields:[{key:"healthFolder",label:"Google Drive folder link",type:"url",ph:"Paste the link here",hint:"Open your health folder in Google Drive, copy the link from the address bar or Share, and paste it here once. It is saved in your data and backup file, not in the app."}],values:{healthFolder:D.healthFolder||""},
+    save:function(x){var u=safeUrl(x.healthFolder);if(x.healthFolder.trim()&&!u){toast("That does not look like a link");return false;}D.healthFolder=u;save();closeSheet();toast(u?"Health folder saved":"Health folder link removed");render();}});
 }
 
 /* ---------- BACKUP & RESTORE ---------- */
@@ -676,7 +744,7 @@ function vBackup(){
 }
 
 /* ---------- tabs & render ---------- */
-var VIEWS={doctor:vDoctor,place:vPlace,med:vMed,cond:vCond,event:vEvent,places:vPlaces,bills:vBills,bill:vBill,insurance:vInsurance,backup:vBackup};
+var VIEWS={doctor:vDoctor,place:vPlace,med:vMed,cond:vCond,event:vEvent,places:vPlaces,bills:vBills,bill:vBill,insurance:vInsurance,backup:vBackup,chases:vChases,chase:vChase};
 function tabbar(){
   function t(k,l,i){return '<button class="tab '+(S.tab===k&&!S.stack.length?"on":"")+'" data-act="tab" data-v="'+k+'">'+ic(i,24)+'<span>'+l+'</span></button>';}
   return '<nav class="tabbar" aria-label="Main">'+t("home","Home","home")+t("people","Doctors","people")+'<button class="logbtn" data-act="new" data-kind="visit" aria-label="Log something now">'+ic("plus",26)+'<span>Log</span></button>'+t("meds","Meds","pill")+t("record","Record","file")+'</nav>';
@@ -706,6 +774,7 @@ function fieldHtml(f,v){
     h='<div class="lbl" style="margin-top:14px">'+esc(f.label)+'</div><div class="chips" style="margin-top:8px" id="'+id+'">'+f.options.map(function(o){return '<button type="button" class="fchip '+(val===o.v?"on":"")+'" data-act="chip" data-key="'+f.key+'" data-val="'+o.v+'" aria-pressed="'+(val===o.v)+'">'+esc(o.l)+'</button>';}).join("")+'</div>';
     return h;
   }
+  if(f.type==="check")return '<label class="f" style="display:flex;align-items:center;gap:12px;min-height:48px"><input id="'+id+'" type="checkbox" style="width:26px;height:26px;min-height:0;flex:none"'+(val?' checked':'')+'><span>'+esc(f.label)+(f.hint?'<small>'+esc(f.hint)+'</small>':'')+'</span></label>';
   if(f.type==="select")h+='<select id="'+id+'">'+f.options.map(function(o){return '<option value="'+esc(o.v)+'"'+(String(val)===String(o.v)?" selected":"")+'>'+esc(o.l)+'</option>';}).join("")+'</select>';
   else if(f.type==="textarea")h+='<textarea id="'+id+'" placeholder="'+esc(f.ph||"")+'">'+esc(val||"")+'</textarea>';
   else h+='<input id="'+id+'" type="'+(f.type==="datetime"?"datetime-local":f.type==="date"?"date":f.type==="money"?"number":f.type||"text")+'"'+(f.type==="money"?' step="0.01" min="0" inputmode="decimal"':'')+' value="'+esc(f.type==="datetime"?toLocalInput(val):f.type==="date"?(val?toDateInput(val):""):(val==null?"":val))+'" placeholder="'+esc(f.ph||"")+'">';
@@ -717,6 +786,7 @@ function collect(){
     var el=document.getElementById("f_"+f.key);
     if(f.type==="chips"){v[f.key]=c.values[f.key];return;}
     if(!el){v[f.key]=c.values[f.key];return;}
+    if(f.type==="check"){v[f.key]=!!el.checked;return;}
     if(f.type==="datetime")v[f.key]=fromLocalInput(el.value);
     else if(f.type==="date")v[f.key]=fromDateInput(el.value);
     else if(f.type==="money")v[f.key]=Math.max(0,parseFloat(el.value)||0);
@@ -730,7 +800,7 @@ function renderSheet(){
   if(!c){$layer.innerHTML="";return;}
   var html='<div class="scrim" data-act="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-label="'+esc(c.title)+'"><div class="grab"></div><div style="display:flex;justify-content:space-between;align-items:center"><h2>'+esc(c.title)+'</h2><button class="textbtn" data-act="close-sheet">Cancel</button></div>'+
     (c.intro?'<p class="sub" style="margin-top:4px">'+esc(c.intro)+'</p>':'')+
-    c.fields.map(function(f){return fieldHtml(f,c.values);}).join("")+
+    c.fields.filter(function(f){return !f.showIf||f.showIf(c.values);}).map(function(f){return fieldHtml(f,c.values);}).join("")+
     '<button class="btn primary block" style="margin-top:20px" data-act="save-sheet">'+esc(c.saveLabel||"Save")+'</button></div></div>';
   $layer.innerHTML=html;
   var first=$layer.querySelector("input[type=text],textarea");if(first&&!c.noFocus)first.focus({preventScroll:true});
@@ -741,9 +811,11 @@ function entryFields(isNew){
   return [
    {key:"kind",label:"What happened",type:"chips",options:["visit","call","result","test","note","appointment"].map(function(k){return {v:k,l:KINDS[k]};})},
    {key:"ts",label:"Date and time",type:"datetime",hint:isNew?"Stamped with the time right now. Change it if this happened earlier or is booked for later.":""},
+   {key:"virtual",label:"Virtual (phone or video appointment)",type:"check",showIf:function(v){return v.kind==="appointment";}},
    {key:"doctorId",label:"With",type:"select",options:docOpts()},
    {key:"placeId",label:"Where",type:"select",options:placeOpts(),hint:"Fills in from the doctor's usual place."},
    {key:"condId",label:"About",type:"select",options:condOpts()},
+   {key:"chaseId",label:"Part of a chase-up?",type:"select",options:chaseOpts(),showIf:function(v){return v.kind==="call";}},
    {key:"title",label:"Short title",type:"text",ph:"e.g. Blood pressure review"},
    {key:"notes",label:"Notes",type:"textarea",ph:"What was said, agreed or found"},
    {key:"letterUrl",label:"Letter link (Google Doc)",type:"url",ph:"Paste the link"}
@@ -759,11 +831,14 @@ function entryChange(key,v){
 }
 function newEntry(pre){
   var k=pre.kind||"visit";
-  var v={kind:k,ts:k==="appointment"?tomorrow9():nowTs(),doctorId:pre.doctorId||"",placeId:"",condId:pre.condId||"",title:"",notes:"",letterUrl:""};
+  var v={kind:k,ts:k==="appointment"?tomorrow9():nowTs(),doctorId:pre.doctorId||"",placeId:"",condId:pre.condId||"",title:"",notes:"",letterUrl:"",virtual:false,chaseId:pre.chaseId||""};
+  var pch=chase(v.chaseId);if(pch){if(!v.doctorId)v.doctorId=pch.doctorId||"";if(!v.condId)v.condId=pch.condId||"";}
   if(v.doctorId&&doc(v.doctorId))v.placeId=doc(v.doctorId).placeId||"";
   openSheet({title:"Log something",intro:"Date and time are filled in for you.",fields:entryFields(true),values:v,onChange:entryChange,saveLabel:"Save entry",
     save:function(x){
-      if(!x.title.trim()){var d=doc(x.doctorId);x.title=KINDS[x.kind]+(d?" with "+d.name:"");}
+      if(x.kind!=="appointment")x.virtual=false;
+      if(x.kind!=="call")x.chaseId="";
+      if(!x.title.trim()){var d=doc(x.doctorId),xc=chase(x.chaseId);x.title=xc?"Call about "+xc.title:KINDS[x.kind]+(d?" with "+d.name:"");}
       x.id=uid("e");D.events.push(x);save();closeSheet();
       if(x.kind!=="appointment"&&x.ts>Date.now()){}
       toast("Saved "+KINDS[x.kind].toLowerCase()+" at "+tm(x.ts)+", "+dFull(x.ts));
@@ -773,7 +848,7 @@ function newEntry(pre){
 function editEntry(id){
   var e=evt(id);
   openSheet({title:"Edit entry",fields:entryFields(false),values:JSON.parse(JSON.stringify(e)),onChange:entryChange,
-    save:function(x){Object.keys(x).forEach(function(k){e[k]=x[k];});if(!e.title.trim())e.title=KINDS[e.kind];save();closeSheet();toast("Entry updated");render();}});
+    save:function(x){if(x.kind!=="appointment")x.virtual=false;if(x.kind!=="call")x.chaseId="";Object.keys(x).forEach(function(k){e[k]=x[k];});if(!e.title.trim())e.title=KINDS[e.kind];save();closeSheet();toast("Entry updated");render();}});
 }
 
 /* ---------- actions ---------- */
@@ -790,10 +865,10 @@ function doAct(el){
    case "back":S.stack.pop();S.confirm=null;render(true);break;
    case "open":go(el.getAttribute("data-v"),id);break;
    case "seg":S.seg[el.getAttribute("data-k")]=el.getAttribute("data-v");render();break;
-   case "goto-record":S.tab="record";S.stack=[];S.seg.record=el.getAttribute("data-seg")||"summary";render(true);break;
+   case "goto-record":S.tfilter="all";S.tab="record";S.stack=[];S.seg.record=el.getAttribute("data-seg")||"summary";render(true);break;
    case "dfilter":S.dfilter=el.getAttribute("data-v");render();break;
    case "tfilter":S.tfilter=el.getAttribute("data-v");render();break;
-   case "new":newEntry({kind:el.getAttribute("data-kind"),doctorId:el.getAttribute("data-doc")||"",condId:el.getAttribute("data-cond")||""});break;
+   case "new":newEntry({kind:el.getAttribute("data-kind"),doctorId:el.getAttribute("data-doc")||"",condId:el.getAttribute("data-cond")||"",chaseId:el.getAttribute("data-chase")||""});break;
    case "edit-event":editEntry(id);break;
    case "del-event":
      if(S.confirm===id){var i=D.events.findIndex(function(e){return e.id===id;});D.events.splice(i,1);S.confirm=null;S.stack.pop();save();toast("Entry deleted");render(true);}
@@ -805,6 +880,22 @@ function doAct(el){
    case "pick-import":var fi=document.getElementById("importFile");if(fi)fi.click();break;
    case "import-text":
      openSheet({title:"Paste backup text",intro:"Paste the text you copied from Backup and restore.",fields:[{key:"txt",label:"Backup text",type:"textarea"}],values:{txt:""},saveLabel:"Check backup",save:function(x){if(!x.txt.trim()){toast("Paste the backup text first");return false;}closeSheet();handleImport(x.txt);}});break;
+   case "cfilter":S.cfilter=el.getAttribute("data-v");render();break;
+   case "edit-folder":editFolder();break;
+   case "add-chase":case "edit-chase":
+     var cc2=a==="edit-chase"?chase(id):null;
+     openSheet({title:cc2?"Edit chase-up":"New chase-up",intro:cc2?"":"For a scan, result or letter you are waiting on. Calls you log can be attached to it.",fields:chaseFields(),values:cc2?JSON.parse(JSON.stringify(cc2)):{title:"",condId:"",doctorId:"",notes:""},saveLabel:cc2?"Save":"Start chase-up",
+       save:function(x){if(!x.title.trim()){toast("Say what you are chasing first");return false;}
+         if(cc2){Object.keys(x).forEach(function(k){cc2[k]=x[k];});}else{x.id=uid("ch");x.startedTs=Date.now();x.resolved=false;x.resolvedTs=null;x.outcome="";D.chases.push(x);}
+         save();closeSheet();toast("Chase-up saved");if(!cc2){S.stack=[];go("chase",x.id);}else render();}});break;
+   case "resolve-chase":
+     var rc=chase(id);
+     openSheet({title:"Mark as resolved",intro:rc.title,fields:[{key:"outcome",label:"What was the answer?",type:"textarea",ph:"Optional. E.g. results are normal, appointment booked"}],values:{outcome:rc.outcome||""},saveLabel:"Mark as resolved",
+       save:function(x){rc.resolved=true;rc.resolvedTs=Date.now();rc.outcome=x.outcome;save();closeSheet();toast("Chase-up resolved");render();}});break;
+   case "reopen-chase":var oc3=chase(id);oc3.resolved=false;oc3.resolvedTs=null;save();toast("Chase-up reopened");render();break;
+   case "del-chase":
+     if(S.confirm===id){D.events.forEach(function(e){if(e.chaseId===id)e.chaseId="";});var ci=D.chases.findIndex(function(c){return c.id===id;});D.chases.splice(ci,1);S.confirm=null;S.stack.pop();save();toast("Chase-up deleted");render(true);}
+     else{S.confirm=id;render();}break;
    case "to-check":S.bfilter="check";S.stack=[];S.confirm=null;go("bills",null);break;
    case "attended":var e=evt(id);e.kind="visit";save();toast("Marked as a visit");render();break;
    case "collected":markCollected(id);break;

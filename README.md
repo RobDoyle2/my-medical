@@ -2,7 +2,8 @@
 
 A single-page app for keeping your own medical records in one place: doctors and
 places, visits and results, medication and refills, bills and insurance claims,
-and a one-page summary to show a doctor.
+chase-ups for results you are waiting on, a link to your own Google Drive health
+folder, and a one-page summary to show a doctor.
 
 It is one file, `index.html`. There is no server and no account. Open it in a
 browser, or host it with GitHub Pages.
@@ -21,6 +22,7 @@ storage and in the backup files you export.
 
 ## Notes
 
+- The version number (for example V0.01) is shown in the top bar and goes up with each change.
 - Data is stored per browser and per device. Moving to another device means
   exporting on one and importing on the other.
 - Phone and email links, and the file-save prompt, depend on the browser or app
