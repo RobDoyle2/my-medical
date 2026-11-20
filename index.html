@@ -144,6 +144,7 @@ var STATUS=["Ongoing","Monitoring","Resolved"];
 var INS={none:"Not claimed",submitted:"Submitted",paid:"Paid out",rejected:"Rejected"};
 
 var ICON={
+ search:'<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
  clip:'<path d="M21 12.5l-8.6 8.6a5 5 0 0 1-7.1-7.1l9-9a3.3 3.3 0 0 1 4.7 4.7l-9 9a1.7 1.7 0 0 1-2.4-2.4l8.3-8.3"/>',
  folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
  down:'<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>',
@@ -211,6 +212,7 @@ function seedExtras(D){
   if(!D.chases)D.chases=[];
   if(D.healthFolder===undefined)D.healthFolder="";
   if(!D.driveFiles)D.driveFiles=[];
+  if(!D.google)D.google={clientId:"",apiKey:""};
   if(D.allergies===undefined)D.allergies="";
   D.places.forEach(function(p){if(p.patientNumber===undefined)p.patientNumber="";});
 }
@@ -741,7 +743,7 @@ function copyText(t){
 }
 function appbar(){
   var n=needBills().length+openChases().length;
-  return '<header class="appbar"><span class="brand">My Medical <span class="ver" aria-label="Version">V0.07</span></span><button class="iconbtn line" data-act="menu-open" aria-label="Open menu'+(n?', '+n+' to follow up':'')+'" aria-haspopup="true">'+ic("menu",24)+'</button></header>';
+  return '<header class="appbar"><span class="brand">My Medical <span class="ver" aria-label="Version">V0.08</span></span><button class="iconbtn line" data-act="menu-open" aria-label="Open menu'+(n?', '+n+' to follow up':'')+'" aria-haspopup="true">'+ic("menu",24)+'</button></header>';
 }
 function renderMenu(){
   var el=document.getElementById("menu");
@@ -753,6 +755,7 @@ function renderMenu(){
     '<button data-act="menu-go" data-v="insurance">'+ic("shield",22)+'<span>Insurance</span></button>'+
     '<button data-act="menu-go" data-v="places">'+ic("pin",22)+'<span>Hospitals and places</span></button>'+
     (folderUrl()?'<a href="'+esc(folderUrl())+'" target="_blank" rel="noopener" data-act="menu-close">'+ic("folder",22)+'<span>Health folder</span>'+ic("ext",18)+'</a>':'<button data-act="edit-folder">'+ic("folder",22)+'<span>Add health folder link</span></button>')+
+    '<button data-act="edit-google">'+ic("shield",22)+'<span>Google Drive connection</span>'+(googleReady()?'<span class="chip plain">Set up</span>':'<span class="chip warn">Not set up</span>')+'</button>'+
     '<button data-act="menu-go" data-v="backup">'+ic("down",22)+'<span>Backup and restore</span></button></nav></div></div>';
 }
 
@@ -944,7 +947,7 @@ function renderSheet(){
 /* entry (event) */
 function docLinkHtml(f,v){
   var id="f_"+f.key,val=v[f.key]||"",u=folderUrl(),files=(D.driveFiles||[]).slice(),h='<label class="f" for="'+id+'">'+esc(f.label)+'</label><div class="fieldbox"><input id="'+id+'" type="url" value="'+esc(val)+'" placeholder="Paste the link, or choose below"></div>';
-  h+='<div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">';
+  h+='<div style="display:flex;flex-direction:column;gap:8px;margin-top:10px"><button type="button" class="btn primary block" data-act="drive-pick" data-key="'+f.key+'">'+ic("search",20)+' Search Google Drive</button>';
   if(files.length){
     var groups={},order=[];
     files.forEach(function(x){var g=x.f||"Health folder (top level)";if(!groups[g]){groups[g]=[];order.push(g);}groups[g].push(x);});
@@ -956,6 +959,48 @@ function docLinkHtml(f,v){
   if(!files.length)h+='<p class="sub" style="margin:0">Import your updated data file to get a list of your folder files here.</p>';
   return h+'</div>';
 }
+/* ---------- GOOGLE DRIVE PICKER ---------- */
+var GL={p:null};
+function loadScript(src){return new Promise(function(res,rej){var el=document.createElement("script"),done=false;var t=setTimeout(function(){if(!done){done=true;rej(new Error("timeout"));}},12000);el.src=src;el.async=true;el.onload=function(){if(!done){done=true;clearTimeout(t);res();}};el.onerror=function(){if(!done){done=true;clearTimeout(t);rej(new Error("load"));}};document.head.appendChild(el);});}
+function loadGoogle(){
+  if(GL.p)return GL.p;
+  GL.p=Promise.all([loadScript("https://apis.google.com/js/api.js"),loadScript("https://accounts.google.com/gsi/client")]).then(function(){return new Promise(function(res,rej){try{gapi.load("picker",{callback:res,onerror:rej});}catch(e){rej(e);}});});
+  GL.p.catch(function(){GL.p=null;});
+  return GL.p;
+}
+function folderId(){var u=D.healthFolder||"",m=u.match(/\/folders\/([A-Za-z0-9_-]+)/)||u.match(/[?&]id=([A-Za-z0-9_-]+)/);return m?m[1]:"";}
+function googleReady(){var g=D.google||{};return !!(g.clientId&&g.apiKey);}
+function editGoogle(){
+  S.menu=false;renderMenu();
+  var g=D.google||{};
+  openSheet({title:"Google Drive connection",intro:"Needed once, for the Search Google Drive button. Both values come from your Google Cloud project. They are saved in your data and backup file, not in the app.",
+    fields:[{key:"clientId",label:"OAuth client ID",type:"text",ph:"1234567890-abc.apps.googleusercontent.com"},{key:"apiKey",label:"API key",type:"text",ph:"AIza..."}],values:{clientId:g.clientId||"",apiKey:g.apiKey||""},
+    save:function(x){D.google={clientId:x.clientId.trim(),apiKey:x.apiKey.trim()};save();closeSheet();toast(googleReady()?"Google Drive connection saved":"Google Drive connection cleared");render();}});
+}
+function drivePick(key){
+  var input=document.getElementById("f_"+key);
+  if(!googleReady()){toast("Set up the Google Drive connection first. It is in the top menu.");return;}
+  toast("Connecting to Google...");
+  loadGoogle().then(function(){
+    var g=D.google;
+    var tc=google.accounts.oauth2.initTokenClient({client_id:g.clientId,scope:"https://www.googleapis.com/auth/drive.file",
+      callback:function(resp){
+        if(!resp||resp.error||!resp.access_token){toast("Google did not give access. Try again.");return;}
+        var fid=folderId(),view=new google.picker.DocsView(google.picker.ViewId.DOCS).setIncludeFolders(true);
+        if(fid)view.setParent(fid);
+        new google.picker.PickerBuilder().addView(view).setOAuthToken(resp.access_token).setDeveloperKey(g.apiKey).setTitle("Choose a document").setCallback(function(data){
+          if(data[google.picker.Response.ACTION]===google.picker.Action.PICKED){
+            var doc0=(data[google.picker.Response.DOCUMENTS]||[])[0],url=doc0&&doc0[google.picker.Document.URL];
+            var el=document.getElementById("f_"+key)||input;
+            if(url&&el){el.value=url;toast("Linked "+(doc0[google.picker.Document.NAME]||"file"));}else toast("Could not read the file link.");
+          }
+        }).build().setVisible(true);
+      },
+      error_callback:function(){toast("The Google sign-in window was closed or blocked.");}});
+    tc.requestAccessToken({prompt:""});
+  },function(){toast("Google sign-in does not work in this preview. Open the GitHub Pages copy of the app.");});
+}
+
 function entryFields(isNew){
   return [
    {key:"kind",label:"What happened",type:"chips",options:["visit","call","result","test","note","appointment"].map(function(k){return {v:k,l:KINDS[k]};})},
@@ -1037,6 +1082,8 @@ function doAct(el){
      var pk=el.getAttribute("data-key"),pin=document.getElementById("f_"+pk);
      try{navigator.clipboard.readText().then(function(tx){tx=String(tx||"").trim();if(/^https?:\/\//i.test(tx)){if(pin)pin.value=tx;toast("Link pasted");}else toast("No link found. Copy the file link in Drive first.");},function(){toast("Could not read the clipboard. Paste into the box instead.");if(pin)pin.focus();});}
      catch(x){toast("Could not read the clipboard. Paste into the box instead.");if(pin)pin.focus();}break;
+   case "drive-pick":drivePick(el.getAttribute("data-key"));break;
+   case "edit-google":editGoogle();break;
    case "cfilter":S.cfilter=el.getAttribute("data-v");render();break;
    case "edit-folder":editFolder();break;
    case "add-chase":case "edit-chase":

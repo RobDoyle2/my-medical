@@ -30,3 +30,12 @@ storage and in the backup files you export.
   hosting the page.
 - This is a prototype. Check anything important against the original letters
   and records.
+
+## Search Google Drive button
+
+The button needs the app to run from a web address Google accepts, so use GitHub Pages:
+
+1. On GitHub, open this repository, then Settings, then Pages. Under Build and deployment choose "Deploy from a branch", branch `main`, folder `/ (root)`, and Save. The app appears at `https://<your-user-name>.github.io/my-medical/`.
+2. In the Google Cloud console, create a project, turn on the Google Picker API and the Google Drive API, set up the OAuth consent screen (add yourself as a test user and the `.../auth/drive.file` scope), create an API key restricted to your Pages address, and create an OAuth client ID of type Web application with `https://<your-user-name>.github.io` as an authorised JavaScript origin.
+3. In the app, open the top menu, choose Google Drive connection, and paste the client ID and API key. They are saved in your data and backup file, not in the code.
+4. Import your data file in that browser. The button then opens Google's file picker, starting in your health folder.
