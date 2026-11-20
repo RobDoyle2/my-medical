@@ -210,6 +210,7 @@ function seedExtras(D){
   if(!D.bills)D.bills=[];
   if(!D.chases)D.chases=[];
   if(D.healthFolder===undefined)D.healthFolder="";
+  if(!D.driveFiles)D.driveFiles=[];
   if(D.allergies===undefined)D.allergies="";
   D.places.forEach(function(p){if(p.patientNumber===undefined)p.patientNumber="";});
 }
@@ -720,7 +721,7 @@ function billFields(){
    {key:"amount",label:"Amount (EUR)",type:"money"},
    {key:"ts",label:"Bill date",type:"date"},
    {key:"dueTs",label:"Due date",type:"date"},
-   {key:"invoiceUrl",label:"Invoice link (Google Doc or Drive)",type:"url",ph:"Paste the link"},
+   {key:"invoiceUrl",label:"Invoice link (Google Drive)",type:"doclink"},
    {key:"paid",label:"Paid?",type:"select",options:[{v:"false",l:"Not paid yet"},{v:"true",l:"Paid"},{v:"null",l:"Not recorded"}]},
    {key:"payRef",label:"Payment reference",type:"text",ph:"Optional"},
    {key:"insStatus",label:"Insurance claim",type:"select",options:Object.keys(INS).map(function(k){return {v:k,l:INS[k]};})},
@@ -740,7 +741,7 @@ function copyText(t){
 }
 function appbar(){
   var n=needBills().length+openChases().length;
-  return '<header class="appbar"><span class="brand">My Medical <span class="ver" aria-label="Version">V0.06</span></span><button class="iconbtn line" data-act="menu-open" aria-label="Open menu'+(n?', '+n+' to follow up':'')+'" aria-haspopup="true">'+ic("menu",24)+'</button></header>';
+  return '<header class="appbar"><span class="brand">My Medical <span class="ver" aria-label="Version">V0.07</span></span><button class="iconbtn line" data-act="menu-open" aria-label="Open menu'+(n?', '+n+' to follow up':'')+'" aria-haspopup="true">'+ic("menu",24)+'</button></header>';
 }
 function renderMenu(){
   var el=document.getElementById("menu");
@@ -908,6 +909,7 @@ function fieldHtml(f,v){
     return h;
   }
   if(f.type==="check")return '<label class="f" style="display:flex;align-items:center;gap:12px;min-height:48px"><input id="'+id+'" type="checkbox" style="width:26px;height:26px;min-height:0;flex:none"'+(val?' checked':'')+'><span>'+esc(f.label)+(f.hint?'<small>'+esc(f.hint)+'</small>':'')+'</span></label>';
+  if(f.type==="doclink")return docLinkHtml(f,v);
   if(f.type==="select")h+='<select id="'+id+'">'+f.options.map(function(o){return '<option value="'+esc(o.v)+'"'+(String(val)===String(o.v)?" selected":"")+'>'+esc(o.l)+'</option>';}).join("")+'</select>';
   else if(f.type==="textarea")h+='<textarea id="'+id+'" placeholder="'+esc(f.ph||"")+'">'+esc(val||"")+'</textarea>';
   else h+='<input id="'+id+'" type="'+(f.type==="datetime"?"datetime-local":f.type==="date"?"date":f.type==="money"?"number":f.type||"text")+'"'+(f.type==="money"?' step="0.01" min="0" inputmode="decimal"':'')+' value="'+esc(f.type==="datetime"?toLocalInput(val):f.type==="date"?(val?toDateInput(val):""):(val==null?"":val))+'" placeholder="'+esc(f.ph||"")+'">';
@@ -940,6 +942,20 @@ function renderSheet(){
 }
 
 /* entry (event) */
+function docLinkHtml(f,v){
+  var id="f_"+f.key,val=v[f.key]||"",u=folderUrl(),files=(D.driveFiles||[]).slice(),h='<label class="f" for="'+id+'">'+esc(f.label)+'</label><div class="fieldbox"><input id="'+id+'" type="url" value="'+esc(val)+'" placeholder="Paste the link, or choose below"></div>';
+  h+='<div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">';
+  if(files.length){
+    var groups={},order=[];
+    files.forEach(function(x){var g=x.f||"Health folder (top level)";if(!groups[g]){groups[g]=[];order.push(g);}groups[g].push(x);});
+    order.sort();
+    h+='<div class="fieldbox"><select id="'+id+'_pick" aria-label="Choose a file from your health folder"><option value="">Choose a file from your health folder ('+files.length+')</option>'+order.map(function(g){return '<optgroup label="'+esc(g)+'">'+groups[g].sort(function(a,b){return a.n<b.n?1:-1;}).map(function(x){return '<option value="'+esc(x.u)+'"'+(x.u===val?" selected":"")+'>'+esc(x.n)+'</option>';}).join("")+'</optgroup>';}).join("")+'</select></div>';
+  }
+  if(u)h+='<a class="btn block" style="justify-content:space-between" href="'+esc(u)+'" target="_blank" rel="noopener"><span>Open health folder to browse</span>'+ic("ext",18)+'</a><button type="button" class="btn block" data-act="paste-link" data-key="'+f.key+'">'+ic("copy",20)+' Paste link I copied</button><p class="sub" style="margin:0">In Drive, open the file, tap Share, then Copy link. Come back here and tap Paste link.</p>';
+  else h+='<p class="sub" style="margin:0">Add your health folder link from the top menu and this will open it for you to browse.</p><button type="button" class="btn block" data-act="paste-link" data-key="'+f.key+'">'+ic("copy",20)+' Paste link I copied</button>';
+  if(!files.length)h+='<p class="sub" style="margin:0">Import your updated data file to get a list of your folder files here.</p>';
+  return h+'</div>';
+}
 function entryFields(isNew){
   return [
    {key:"kind",label:"What happened",type:"chips",options:["visit","call","result","test","note","appointment"].map(function(k){return {v:k,l:KINDS[k]};})},
@@ -951,7 +967,7 @@ function entryFields(isNew){
    {key:"chaseId",label:"Part of a chase-up?",type:"select",options:chaseOpts(),showIf:function(v){return v.kind==="call";}},
    {key:"title",label:"Short title",type:"text",ph:"e.g. Blood pressure review"},
    {key:"notes",label:"Notes",type:"textarea",ph:"What was said, agreed or found"},
-   {key:"letterUrl",label:"Letter link (Google Doc)",type:"url",ph:"Paste the link"}
+   {key:"letterUrl",label:"Letter or document link (Google Drive)",type:"doclink"}
   ];
 }
 function entryChange(key,v){
@@ -1017,6 +1033,10 @@ function doAct(el){
    case "hfiles":S.hfiles=el.getAttribute("data-v");render();break;
    case "hist-save":histSave();break;
    case "hist-copy":histCopy();break;
+   case "paste-link":
+     var pk=el.getAttribute("data-key"),pin=document.getElementById("f_"+pk);
+     try{navigator.clipboard.readText().then(function(tx){tx=String(tx||"").trim();if(/^https?:\/\//i.test(tx)){if(pin)pin.value=tx;toast("Link pasted");}else toast("No link found. Copy the file link in Drive first.");},function(){toast("Could not read the clipboard. Paste into the box instead.");if(pin)pin.focus();});}
+     catch(x){toast("Could not read the clipboard. Paste into the box instead.");if(pin)pin.focus();}break;
    case "cfilter":S.cfilter=el.getAttribute("data-v");render();break;
    case "edit-folder":editFolder();break;
    case "add-chase":case "edit-chase":
@@ -1139,6 +1159,9 @@ document.addEventListener("change",function(ev){
     r.readAsText(t.files[0]);
     try{t.value="";}catch(e){}
     return;
+  }
+  if(S.sheet&&t.id&&/^f_.+_pick$/.test(t.id)&&t.tagName==="SELECT"){
+    var bk=t.id.slice(2,-5),bv=collect();bv[bk]=t.value||bv[bk];S.sheet.values=S.sheet.onChange?S.sheet.onChange(bk,bv):bv;renderSheet();return;
   }
   if(S.sheet&&S.sheet.onChange&&t.id&&t.id.indexOf("f_")===0&&t.tagName==="SELECT"){
     var key=t.id.slice(2),v=collect();S.sheet.values=S.sheet.onChange(key,v);renderSheet();
