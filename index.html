@@ -482,6 +482,26 @@ function vCond(id){
 }
 
 /* ---------- EVENT ---------- */
+function relatedFor(e){
+  var all=D.events.filter(function(x){return x.id!==e.id;});
+  var lastVisit=null;
+  if(e.doctorId){lastVisit=all.filter(function(x){return x.doctorId===e.doctorId&&(x.kind==="visit"||x.kind==="appointment")&&x.ts<e.ts&&x.ts<=Date.now();}).sort(sortDesc)[0]||null;}
+  var issue=e.condId?all.filter(function(x){return x.condId===e.condId&&x!==lastVisit;}).sort(sortDesc).slice(0,4):[];
+  var chs=openChases().filter(function(c){return c.id===e.chaseId||(e.condId&&c.condId===e.condId)||(e.doctorId&&c.doctorId===e.doctorId);});
+  return {lastVisit:lastVisit,issue:issue,chases:chs};
+}
+function relatedHtml(e){
+  var r=relatedFor(e),out='<div class="sec"><span>Related</span></div>';
+  if(!r.lastVisit&&!r.issue.length&&!r.chases.length)return out+'<div class="card pad16"><p class="sub">Nothing related yet. Link a doctor or a health issue to see earlier visits here.</p></div>';
+  if(r.lastVisit){
+    var lv=r.lastVisit;
+    out+='<p class="sub" style="margin:0 20px 6px">Last visit with this doctor</p><div class="card" style="overflow:hidden">'+evRow(lv)+
+      (lv.notes||lv.letterUrl?'<div style="padding:0 16px 14px">'+(lv.notes?'<p class="note">'+esc(lv.notes)+'</p>':'')+(lv.letterUrl&&safeUrl(lv.letterUrl)?'<a class="btn block" style="margin-top:10px;justify-content:space-between" href="'+esc(safeUrl(lv.letterUrl))+'" target="_blank" rel="noopener"><span>Open letter (Google Drive)</span>'+ic("ext",18)+'</a>':'')+'</div>':'')+'</div>';
+  }
+  if(r.issue.length)out+='<p class="sub" style="margin:14px 20px 6px">Other entries about '+esc(cond(e.condId).name)+'</p>'+listCard(r.issue.map(evRow).join(""));
+  if(r.chases.length)out+='<p class="sub" style="margin:14px 20px 6px">Open chase-ups</p>'+listCard(r.chases.map(chaseRow).join(""));
+  return out;
+}
 function vEvent(id){
   var e=evt(id); if(!e)return top("Entry")+'<div class="empty">Not found.</div>';
   var d=doc(e.doctorId),p=pl(e.placeId),c=cond(e.condId),m=med(e.medId),ch=chase(e.chaseId);
@@ -494,6 +514,7 @@ function vEvent(id){
     (c?'<button class="row" data-act="open" data-v="cond" data-id="'+c.id+'"><span class="avatar">'+ic("file",20)+'</span><span class="grow"><span class="meta">About</span><span class="name" style="display:block">'+esc(c.name)+'</span></span></button>':'')+
     (m?'<button class="row" data-act="open" data-v="med" data-id="'+m.id+'"><span class="avatar">'+ic("pill",20)+'</span><span class="grow"><span class="meta">Medicine</span><span class="name" style="display:block">'+esc(m.name)+'</span></span></button>':'')+
     (ch?'<button class="row" data-act="open" data-v="chase" data-id="'+ch.id+'"><span class="avatar">'+ic("phone",20)+'</span><span class="grow"><span class="meta">Chase-up</span><span class="name" style="display:block">'+esc(ch.title)+'</span></span></button>':'')+billLinks(e)+((!d&&!p&&!c&&!m&&!ch&&!billsFor(e).length)?'<div class="empty">Not linked to anything.</div>':'')+'</div>';
+  out+=relatedHtml(e);
   out+='<div class="pad" style="margin-top:20px;display:flex;flex-direction:column;gap:10px">'+
     (e.kind==="appointment"&&e.ts<Date.now()?'<button class="btn primary block" data-act="attended" data-id="'+e.id+'">Mark as attended</button>':'')+
     (e.notRecorded?'<button class="btn primary block" data-act="recorded" data-id="'+e.id+'">Mark as recorded</button>':'')+
@@ -607,7 +628,7 @@ function copyText(t){
 }
 function appbar(){
   var n=needBills().length+openChases().length;
-  return '<header class="appbar"><span class="brand">My Medical <span class="ver" aria-label="Version">V0.01</span></span><button class="iconbtn line" data-act="menu-open" aria-label="Open menu'+(n?', '+n+' to follow up':'')+'" aria-haspopup="true">'+ic("menu",24)+'</button></header>';
+  return '<header class="appbar"><span class="brand">My Medical <span class="ver" aria-label="Version">V0.02</span></span><button class="iconbtn line" data-act="menu-open" aria-label="Open menu'+(n?', '+n+' to follow up':'')+'" aria-haspopup="true">'+ic("menu",24)+'</button></header>';
 }
 function renderMenu(){
   var el=document.getElementById("menu");
