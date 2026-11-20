@@ -22,6 +22,7 @@ storage and in the backup files you export.
 
 ## Notes
 
+- The History page (Record tab) groups everything by year and can save a printable page. Files from your Google Drive health folder are listed on each entry, with a link if you add one in your data.
 - The version number (for example V0.01) is shown in the top bar and goes up with each change.
 - Data is stored per browser and per device. Moving to another device means
   exporting on one and importing on the other.
