@@ -1103,7 +1103,7 @@ function doAct(el){
    case "drive-pick":drivePick(el.getAttribute("data-key"));break;
    case "edit-google":editGoogle();break;
    case "edit-name":
-     openSheet({title:"Your name",intro:"Shown in the Home greeting. Saved in your data and backup file.",fields:[{key:"name",label:"Name",type:"text",ph:"e.g. Robert"}],values:{name:D.name||""},
+     openSheet({title:"Your name",intro:"Shown in the Home greeting. Saved in your data and backup file.",fields:[{key:"name",label:"Name",type:"text",ph:"Your name"}],values:{name:D.name||""},
        save:function(x){D.name=x.name.trim();save();closeSheet();toast(D.name?"Name saved":"Name removed");render();}});break;
    case "cfilter":S.cfilter=el.getAttribute("data-v");render();break;
    case "edit-folder":editFolder();break;
