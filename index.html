@@ -562,8 +562,11 @@ function histHtml(){
 function histName(){var d=new Date();return "my-health-history-"+d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+".html";}
 function histSave(){
   var html=histHtml(),name=histName();
-  function fallback(){shareFile(name,"text/html",html).then(function(){toast("Shared. Choose Drive or Files, then open it to print.");},function(e){if(e&&e.name==="AbortError")return;copyFallback();});}
   function copyFallback(){try{navigator.clipboard.writeText(histText()).then(function(){toast("Saving a file did not work here. History copied as text instead.");},function(){showHistText();});}catch(e){showHistText();}}
+  function fallback(){
+    if(!isFramed()&&downloadLink(name,"text/html",html)){toast("Downloading "+name+". Open it, then tap Print or save as PDF.");return;}
+    shareFile(name,"text/html",html).then(function(){toast("Shared. Choose Drive or Files, then open it to print.");},function(e){if(e&&e.name==="AbortError")return;if(isFramed())downloadLink(name,"text/html",html);copyFallback();});
+  }
   if(DL){DL.save({filename:name,data:html}).then(function(){toast("Saved "+name+". Open it, then tap Print or save as PDF.");},function(e){if(e&&e.code==="declined")return;if(e&&e.code==="rate_limited"){toast("A save prompt is already open. Answer it first.");return;}fallback();});return;}
   if(window.showSaveFilePicker){
     window.showSaveFilePicker({suggestedName:name,types:[{description:"Web page",accept:{"text/html":[".html"]}}]}).then(function(h){return h.createWritable().then(function(w){return w.write(html).then(function(){return w.close();});}).then(function(){toast("Saved "+(h.name||name)+". Open it, then tap Print or save as PDF.");});}).catch(function(e){if(e&&e.name==="AbortError")return;fallback();});
@@ -757,7 +760,7 @@ function copyText(t){
 }
 function appbar(){
   var n=needBills().length+openChases().length;
-  return '<header class="appbar"><span class="brand">My Medical <span class="ver" aria-label="Version">V0.11</span></span><button class="iconbtn line" data-act="menu-open" aria-label="Open menu'+(n?', '+n+' to follow up':'')+'" aria-haspopup="true">'+ic("menu",24)+'</button></header>';
+  return '<header class="appbar"><span class="brand">My Medical <span class="ver" aria-label="Version">V0.12</span></span><button class="iconbtn line" data-act="menu-open" aria-label="Open menu'+(n?', '+n+' to follow up':'')+'" aria-haspopup="true">'+ic("menu",24)+'</button></header>';
 }
 function renderMenu(){
   var el=document.getElementById("menu");
@@ -851,16 +854,33 @@ function shareFile(name,mime,txt){
     }catch(e){rej(e);}
   });
 }
+function isFramed(){try{return window.self!==window.top;}catch(e){return true;}}
+function downloadLink(name,mime,txt){
+  try{
+    var b=new Blob([txt],{type:mime+";charset=utf-8"}),u=URL.createObjectURL(b),a=document.createElement("a");
+    a.href=u;a.download=name;a.rel="noopener";a.style.display="none";document.body.appendChild(a);a.click();
+    setTimeout(function(){try{document.body.removeChild(a);URL.revokeObjectURL(u);}catch(e){}},1500);
+    return true;
+  }catch(e){return false;}
+}
 function exportFile(){
   var txt=exportText(),name=exportName();
+  function lastResort(){
+    var tried=isFramed()&&downloadLink(name,"application/json",txt);
+    showBackupText(tried?"A download may have started as "+name+". If nothing was saved, copy this text into a file or note instead.":"Saving a file is not available here. Copy this text into a file or note instead.");
+  }
+  function viaShare(){
+    shareFile(name,"application/json",txt).then(function(){markBackup();toast("Backup shared. Choose Drive or Files to keep it.");render();},function(e){if(e&&e.name==="AbortError")return;lastResort();});
+  }
+  function viaLink(){
+    if(!isFramed()&&downloadLink(name,"application/json",txt)){markBackup();toast("Downloading "+name+". Look in your Downloads.");render();return;}
+    viaShare();
+  }
   function viaPicker(){
-    if(!window.showSaveFilePicker){
-      shareFile(name,"application/json",txt).then(function(){markBackup();toast("Backup shared. Choose Drive or Files to keep it.");render();},function(e){if(e&&e.name==="AbortError")return;showBackupText("Saving a file is not available here. Copy this text into a file or note instead.");});
-      return;
-    }
+    if(!window.showSaveFilePicker){viaLink();return;}
     window.showSaveFilePicker({suggestedName:name,types:[{description:"JSON file",accept:{"application/json":[".json"]}}]})
       .then(function(h){return h.createWritable().then(function(w){return w.write(txt).then(function(){return w.close();});}).then(function(){markBackup();toast("Saved "+(h.name||name));render();});})
-      .catch(function(e){if(e&&e.name==="AbortError")return;showBackupText("Saving a file did not work here. Copy this text into a file or note instead.");});
+      .catch(function(e){if(e&&e.name==="AbortError")return;viaLink();});
   }
   if(!DL){viaPicker();return;}
   DL.save({filename:name,data:txt}).then(function(){markBackup();toast("Backup file ready: "+name);render();},function(e){
