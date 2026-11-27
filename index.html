@@ -217,6 +217,7 @@ function seedExtras(D){
   if(D.name===undefined)D.name="";
   if(!D.google)D.google={clientId:"",apiKey:""};
   if(D.allergies===undefined)D.allergies="";
+  if(!D.details)D.details={address:"",phone:"",eircode:""};
   D.places.forEach(function(p){if(p.patientNumber===undefined)p.patientNumber="";});
 }
 var D;
@@ -255,11 +256,43 @@ function evRow(e){
 function listCard(html){return '<div class="card" style="overflow:hidden">'+html+'</div>';}
 
 /* ---------- HOME ---------- */
+/* ---------- MY DETAILS (private, hidden until tapped) ---------- */
+var DET={open:false,show:false,timer:null};
+function hasDetails(){var m=D.details||{};return !!(m.address||m.phone||m.eircode);}
+function hideDetails(close){
+  if(DET.timer){clearTimeout(DET.timer);DET.timer=null;}
+  var was=DET.show||(close&&DET.open);
+  DET.show=false;if(close)DET.open=false;
+  if(was&&!S.stack.length&&S.tab==="home"&&!S.sheet)render();
+}
+function armDetails(){
+  if(DET.timer)clearTimeout(DET.timer);
+  DET.timer=setTimeout(function(){
+    DET.timer=null;
+    if(S.sheet){armDetails();return;}
+    hideDetails(false);
+  },30000);
+}
+function detailsHtml(){
+  var m=D.details||{},o='<div class="pad" style="padding-top:0"><button type="button" class="textbtn" data-act="details-toggle" aria-expanded="'+(DET.open?"true":"false")+'" style="min-height:32px;padding:0">My details '+(DET.open?"\u25B4":"\u25BE")+'</button></div>';
+  if(!DET.open)return o;
+  var row=function(l,v){return '<div style="margin-top:10px"><span class="lbl">'+l+'</span><div style="font-weight:700;font-size:17px;white-space:pre-wrap">'+(DET.show?esc(v||"Not added"):"\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022")+'</div></div>';};
+  o+='<div class="card pad16" style="margin-top:6px"><span class="lbl">Name</span><div style="font-weight:700;font-size:17px">'+esc(D.name||"Not added")+'</div>';
+  if(!hasDetails()){
+    o+='<div class="sub" style="margin-top:10px">No address, phone or Eircode saved yet.</div><div class="btnrow"><button class="btn flex1" data-act="details-edit">Add details</button></div>';
+  }else{
+    o+=row("Address",m.address)+row("Phone",m.phone)+row("Eircode",m.eircode);
+    o+='<div class="btnrow">'+(DET.show?'<button class="btn flex1" data-act="details-hide">Hide</button><button class="btn flex1" data-act="details-edit">Edit</button>':'<button class="btn primary flex1" data-act="details-show">Show</button>')+'</div>';
+    if(DET.show)o+='<div class="sub" style="margin-top:8px;font-size:13px">Hides again after 30 seconds.</div>';
+  }
+  return o+'</div>';
+}
 function vHome(){
   var now=new Date(), h=now.getHours();
   var greet=h<12?"Good morning":(h<18?"Good afternoon":"Good evening");
   var nx=upcoming()[0], out='';
   out+='<div class="pad" style="padding-top:6px"><div class="sub">'+DOW[now.getDay()]+" "+now.getDate()+" "+MONL[now.getMonth()]+'</div><h1 class="big">'+greet+(D.name?", "+esc(D.name):"")+' <button type="button" data-act="edit-name" aria-label="Change your name" style="background:none;border:0;padding:6px;margin-left:2px;color:var(--muted);vertical-align:middle;cursor:pointer">'+ic("pencil",20)+'</button></h1></div>';
+  out+=detailsHtml();
   if(nx){
     var d=doc(nx.doctorId),p=pl(nx.placeId);
     out+='<div class="hero"><div class="eyebrow">NEXT APPOINTMENT</div><div class="big2">'+dStamp(nx.ts)+'</div><div class="line2">'+esc(d?d.name+(d.type?" · "+d.type:""):"No doctor chosen")+'</div><div class="line2" style="opacity:.85">'+esc(nx.title)+(p?" · "+esc(p.name):"")+(nx.virtual?' <span class="chip" style="background:#fff;color:#0F4546;margin-left:6px">Virtual</span>':'')+'</div>'+
@@ -472,6 +505,7 @@ function vRecord(){
     out+='<div class="sec"><span>Current medication</span></div>'+listCard(D.meds.filter(function(m){return m.active;}).map(medRow).join(""));
     out+='<div class="sec"><span>My doctors</span></div>'+listCard(D.doctors.map(function(d){var lv=lastVisit(d.id),p=pl(d.placeId);return '<button class="row" data-act="open" data-v="doctor" data-id="'+d.id+'"><span class="avatar">'+esc(initials(d.name))+'</span><span class="grow"><span class="name" style="display:block">'+esc(d.name)+'</span><span class="meta">'+esc(d.type)+(p?" · "+esc(p.name):"")+'</span><span class="meta" style="display:block">'+(lv?"Last visit "+dFull(lv.ts):"No visits logged")+'</span></span></button>';}).join(""));
     out+='<div class="pad" style="margin-top:20px"><button class="btn primary block" data-act="copy-summary">'+ic("copy",20)+' Copy summary as text</button><p class="proto" style="margin:8px 0 0">Paste it into a message or document. In the finished app this would save as a PDF.</p></div>';
+    out+='<div class="pad" style="margin-top:12px"><button class="btn block" data-act="sum-save">'+ic("down",20)+' Save printable summary (one page)</button></div>';
   }else{
     var f=S.tfilter;
     out+='<div class="pad chips" style="margin-top:14px">'+[["all","Everything"],["visit","Visits"],["call","Calls"],["result","Results"],["test","Tests"],["collected","Medicine"],["note","Notes"],["torecord","To record"]].map(function(x){return '<button class="fchip '+(f===x[0]?"on":"")+'" data-act="tfilter" data-v="'+x[0]+'">'+x[1]+'</button>';}).join("")+'</div>';
@@ -558,6 +592,43 @@ function histHtml(){
     h+='</table>';
   });
   return h+'</body></html>';
+}
+/* ---------- ONE-PAGE PRINTABLE SUMMARY ---------- */
+function sumName(){var d=new Date();return "my-health-summary-"+d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+".html";}
+function sumHtml(){
+  var m=D.details||{},meds=D.meds.filter(function(x){return x.active;}),cs=condsSorted();
+  var h='<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>My health summary</title><style>'+
+   '@page{size:A4;margin:12mm}body{font:13px/1.4 Arial,Helvetica,sans-serif;color:#111;max-width:760px;margin:20px auto;padding:0 16px}h1{font-size:22px;margin:0 0 2px}h2{font-size:14px;margin:16px 0 4px;border-bottom:2px solid #111;padding-bottom:2px;text-transform:uppercase;letter-spacing:.04em}'+
+   '.sub{color:#555;margin:0}.det{display:flex;flex-wrap:wrap;gap:4px 24px;margin-top:8px}.det div{min-width:150px}.k{font-size:11px;color:#555;text-transform:uppercase;letter-spacing:.05em}'+
+   'table{width:100%;border-collapse:collapse}td{vertical-align:top;padding:4px 6px;border-bottom:1px solid #ddd}td.r{white-space:nowrap;color:#444;text-align:right}.btn{padding:10px 16px;font-size:15px;margin:0 0 12px}'+
+   'tr{page-break-inside:avoid}@media print{.btn{display:none}body{margin:0;max-width:none;padding:0}}</style></head><body>';
+  h+='<button class="btn" onclick="window.print()">Print or save as PDF</button><h1>My health summary</h1><p class="sub">Prepared '+esc(dFull(Date.now()))+'</p>';
+  h+='<h2>My details</h2><div class="det"><div><span class="k">Name</span><br><b>'+esc(D.name||"Not added")+'</b></div>';
+  if(m.address)h+='<div><span class="k">Address</span><br><b style="white-space:pre-line">'+esc(m.address)+'</b></div>';
+  if(m.eircode)h+='<div><span class="k">Eircode</span><br><b>'+esc(m.eircode)+'</b></div>';
+  if(m.phone)h+='<div><span class="k">Phone</span><br><b>'+esc(m.phone)+'</b></div>';
+  h+='</div><h2>Health conditions</h2>';
+  if(cs.length){h+='<table>';cs.forEach(function(c){h+='<tr><td><b>'+esc(c.name)+'</b></td><td>'+esc(c.status)+'</td><td class="r">Since '+esc(dMon(c.since))+'</td></tr>';});h+='</table>';}
+  else h+='<p>None recorded.</p>';
+  h+='<h2>Current medication</h2>';
+  if(meds.length){h+='<table>';meds.forEach(function(x){h+='<tr><td><b>'+esc(x.name)+'</b></td><td>'+esc(x.dose||"")+'</td><td>'+esc(x.schedule||"")+'</td></tr>';});h+='</table>';}
+  else h+='<p>None recorded.</p>';
+  h+='<h2>Allergies</h2><p><b>'+esc(D.allergies||"None recorded")+'</b></p>';
+  return h+'</body></html>';
+}
+function sumSave(){
+  var html=sumHtml(),name=sumName(),ok=" Open it, then tap Print or save as PDF.";
+  function copyFallback(){try{navigator.clipboard.writeText(summaryText()).then(function(){toast("Saving a file did not work here. Summary copied as text instead.");},function(){showCopy();});}catch(e){showCopy();}}
+  function fallback(){
+    if(!isFramed()&&downloadLink(name,"text/html",html)){toast("Downloading "+name+"."+ok);return;}
+    shareFile(name,"text/html",html).then(function(){toast("Shared. Choose Drive or Files, then open it to print.");},function(e){if(e&&e.name==="AbortError")return;if(isFramed())downloadLink(name,"text/html",html);copyFallback();});
+  }
+  if(DL){DL.save({filename:name,data:html}).then(function(){toast("Saved "+name+"."+ok);},function(e){if(e&&e.code==="declined")return;if(e&&e.code==="rate_limited"){toast("A save prompt is already open. Answer it first.");return;}fallback();});return;}
+  if(window.showSaveFilePicker){
+    window.showSaveFilePicker({suggestedName:name,types:[{description:"Web page",accept:{"text/html":[".html"]}}]}).then(function(h){return h.createWritable().then(function(w){return w.write(html).then(function(){return w.close();});}).then(function(){toast("Saved "+(h.name||name)+"."+ok);});}).catch(function(e){if(e&&e.name==="AbortError")return;fallback();});
+    return;
+  }
+  fallback();
 }
 function histName(){var d=new Date();return "my-health-history-"+d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+".html";}
 function histSave(){
@@ -760,7 +831,7 @@ function copyText(t){
 }
 function appbar(){
   var n=needBills().length+openChases().length;
-  return '<header class="appbar"><span class="brand">My Medical <span class="ver" aria-label="Version">V0.12</span></span><button class="iconbtn line" data-act="menu-open" aria-label="Open menu'+(n?', '+n+' to follow up':'')+'" aria-haspopup="true">'+ic("menu",24)+'</button></header>';
+  return '<header class="appbar"><span class="brand">My Medical <span class="ver" aria-label="Version">V0.14</span></span><button class="iconbtn line" data-act="menu-open" aria-label="Open menu'+(n?', '+n+' to follow up':'')+'" aria-haspopup="true">'+ic("menu",24)+'</button></header>';
 }
 function renderMenu(){
   var el=document.getElementById("menu");
@@ -937,6 +1008,7 @@ function tabbar(){
 }
 function render(scroll){
   var topv=S.stack[S.stack.length-1], html;
+  if((topv||S.tab!=="home")&&(DET.show||DET.open)){DET.show=false;DET.open=false;if(DET.timer){clearTimeout(DET.timer);DET.timer=null;}}
   if(topv)html=VIEWS[topv.v](topv.id);
   else html={home:vHome,people:vPeople,meds:vMeds,record:vRecord}[S.tab]();
   $app.innerHTML=(topv?"":appbar())+html+tabbar();
@@ -1149,6 +1221,7 @@ function doAct(el){
    case "hcond":S.hcond=el.getAttribute("data-v");render();break;
    case "hfiles":S.hfiles=el.getAttribute("data-v");render();break;
    case "hist-save":histSave();break;
+   case "sum-save":sumSave();break;
    case "hist-copy":histCopy();break;
    case "paste-link":
      var pk=el.getAttribute("data-key"),pin=document.getElementById("f_"+pk);
@@ -1156,6 +1229,15 @@ function doAct(el){
      catch(x){toast("Could not read the clipboard. Paste into the box instead.");if(pin)pin.focus();}break;
    case "drive-pick":drivePick(el.getAttribute("data-key"));break;
    case "edit-google":editGoogle();break;
+   case "details-toggle":
+     if(DET.open){if(DET.timer){clearTimeout(DET.timer);DET.timer=null;}DET.open=false;DET.show=false;}else{DET.open=true;DET.show=false;}
+     render();break;
+   case "details-show":DET.show=true;armDetails();render();break;
+   case "details-hide":hideDetails(false);DET.show=false;render();break;
+   case "details-edit":
+     var dm=D.details||{};
+     openSheet({title:"My details",intro:"Private. Saved in your data and backup file. Shown on Home only when you tap Show.",fields:[{key:"address",label:"Address",type:"textarea",ph:"House, street, town, county"},{key:"phone",label:"Phone number",type:"tel",ph:""},{key:"eircode",label:"Eircode",type:"text",ph:"Eircode"}],values:{address:dm.address||"",phone:dm.phone||"",eircode:dm.eircode||""},
+       save:function(x){D.details={address:x.address.trim(),phone:x.phone.trim(),eircode:x.eircode.trim()};save();closeSheet();toast("Details saved");if(DET.show)armDetails();render();}});break;
    case "edit-name":
      openSheet({title:"Your name",intro:"Shown in the Home greeting. Saved in your data and backup file.",fields:[{key:"name",label:"Name",type:"text",ph:"Your name"}],values:{name:D.name||""},
        save:function(x){D.name=x.name.trim();save();closeSheet();toast(D.name?"Name saved":"Name removed");render();}});break;
@@ -1294,6 +1376,8 @@ document.addEventListener("keydown",function(ev){
   if(ev.key==="Escape"){if(S.sheet)closeSheet();else if(S.menu){S.menu=false;renderMenu();}}
   if(ev.key==="Enter"&&ev.target.id==="raiseInput"){ev.preventDefault();doAct(document.querySelector('[data-act="raise-add"]'));}
 });
+document.addEventListener("visibilitychange",function(){if(document.hidden)hideDetails(true);});
+window.addEventListener("pagehide",function(){hideDetails(true);});
 render();
 })();
 </script>
